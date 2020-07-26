@@ -66,6 +66,7 @@ struct mv88e6xxx_devlink_atu_entry {
 void usage(const char *progname)
 {
 	printf("%s [OPTIONs]\n", progname);
+	printf("  --debug/-d\tExtra debug output\n");
 	printf("  --list/-l\tList the mv88e6xxx devices\n");
 	printf("  --device/-d\tDump this device\n");
 	printf("  --atu\t\tDump the ATU\n");
@@ -814,6 +815,7 @@ int main(int argc, char * argv[])
 	bool do_global2 = false;
 	bool do_list = false;
 	bool have_device = false;
+	bool debug = false;
 
 	static struct option long_options[] = {
 		{"atu",	    no_argument,       0,  0 },
@@ -822,6 +824,7 @@ int main(int argc, char * argv[])
 		{"global2", no_argument,       0,  0 },
 		{"device",  required_argument, 0, 'd'},
 		{"list",    no_argument,       0, 'l'},
+		{"debug",   no_argument,       0, 'D'},
 		{"help",    no_argument,       0, 'h'},
 		{0,	    0,		       0,  0 }
 	};
@@ -830,7 +833,7 @@ int main(int argc, char * argv[])
 		int option_index = 0;
 		int c;
 
-		c = getopt_long(argc, argv, "d:lh",
+		c = getopt_long(argc, argv, "d:lDh",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -867,13 +870,17 @@ int main(int argc, char * argv[])
 		case 'l':
 			do_list = true;
 			break;
+		case 'D':
+			debug = true;
+			break;
 		default:
 			printf("?? getopt returned character code %d ??\n", c);
 			exit(EXIT_FAILURE);
 		}
 	}
 
-	ctx.nlg = mnlg_socket_open(DEVLINK_GENL_NAME, DEVLINK_GENL_VERSION);
+	ctx.nlg = mnlg_socket_open(DEVLINK_GENL_NAME, DEVLINK_GENL_VERSION,
+				   debug);
 	if (!ctx.nlg) {
 		printf("Failed to connect to devlink Netlink\n");
 		exit(EXIT_FAILURE);
