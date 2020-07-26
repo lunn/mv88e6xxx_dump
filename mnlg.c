@@ -20,16 +20,19 @@
 
 #include "libnetlink.h"
 #include "mnlg.h"
+#include "prettymsg.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 struct mnlg_socket {
 	struct mnl_socket *nl;
 	char *buf;
-	uint32_t id;
+	uint32_t devlink_id;
+	uint32_t req_id;
 	uint8_t version;
 	unsigned int seq;
 	unsigned int portid;
+	bool pretty_print;
 };
 
 static struct nlmsghdr *__mnlg_msg_prepare(struct mnlg_socket *nlg, uint8_t cmd,
@@ -41,6 +44,7 @@ static struct nlmsghdr *__mnlg_msg_prepare(struct mnlg_socket *nlg, uint8_t cmd,
 
 	nlh = mnl_nlmsg_put_header(nlg->buf);
 	nlh->nlmsg_type	= id;
+	nlg->req_id = id;
 	nlh->nlmsg_flags = flags;
 	nlg->seq = time(NULL);
 	nlh->nlmsg_seq = nlg->seq;
@@ -55,11 +59,41 @@ static struct nlmsghdr *__mnlg_msg_prepare(struct mnlg_socket *nlg, uint8_t cmd,
 struct nlmsghdr *mnlg_msg_prepare(struct mnlg_socket *nlg, uint8_t cmd,
 				  uint16_t flags)
 {
-	return __mnlg_msg_prepare(nlg, cmd, flags, nlg->id, nlg->version);
+	return __mnlg_msg_prepare(nlg, cmd, flags, nlg->devlink_id,
+				  nlg->version);
+}
+
+static void mnlg_pretty_print(struct mnlg_socket *nlg,
+			      const struct nlmsghdr *nlh,
+			      uint32_t nlmsg_type,
+			      bool send)
+{
+	if (send)
+		printf("SEND ");
+	else
+		printf("RECEIVE ");
+
+	if (nlmsg_type == GENL_ID_CTRL) {
+		printf("genl-ctrl\n");
+		pretty_print_genlmsg(nlh, genlctrl_msg_desc,
+				     genlctrl_msg_n_desc, 0);
+		return;
+	}
+	if (nlmsg_type == nlg->devlink_id) {
+		printf("devlink\n");
+		pretty_print_genlmsg(nlh, devlink_msg_desc,
+				     devlink_msg_n_desc, 0);
+		return;
+	}
+	printf("nlmsg_type %d\n", nlh->nlmsg_type);
+	pretty_print_genlmsg(nlh, NULL, 0, 0);
 }
 
 int mnlg_socket_send(struct mnlg_socket *nlg, const struct nlmsghdr *nlh)
 {
+	if (nlg->pretty_print)
+		mnlg_pretty_print(nlg, nlh, nlh->nlmsg_type, true);
+
 	return mnl_socket_sendto(nlg->nl, nlh, nlh->nlmsg_len);
 }
 
@@ -103,6 +137,19 @@ static mnl_cb_t mnlg_cb_array[NLMSG_MIN_TYPE] = {
 	[NLMSG_OVERRUN]	= mnlg_cb_noop,
 };
 
+void mnlg_pretty_print_msg(struct mnlg_socket *nlg, void *msg,
+			   unsigned int len)
+{
+	struct nlmsghdr *nlhdr = msg;
+	int left = len;
+
+	while(nlhdr && left > 0 && mnl_nlmsg_ok(nlhdr, left)) {
+		//nlhdr->nlmsg_type = nlg->req_id;
+		mnlg_pretty_print(nlg,  nlhdr, nlg->req_id, false);
+		nlhdr = mnl_nlmsg_next(nlhdr, &left);
+	}
+}
+
 int mnlg_socket_recv_run(struct mnlg_socket *nlg, mnl_cb_t data_cb, void *data)
 {
 	int err;
@@ -112,6 +159,10 @@ int mnlg_socket_recv_run(struct mnlg_socket *nlg, mnl_cb_t data_cb, void *data)
 					  MNL_SOCKET_BUFFER_SIZE);
 		if (err <= 0)
 			break;
+
+		if (nlg->pretty_print)
+			mnlg_pretty_print_msg(nlg, nlg->buf, err);
+
 		err = mnl_cb_run2(nlg->buf, err, nlg->seq, nlg->portid,
 				  data_cb, data, mnlg_cb_array,
 				  ARRAY_SIZE(mnlg_cb_array));
@@ -207,7 +258,7 @@ int mnlg_socket_group_add(struct mnlg_socket *nlg, const char *group_name)
 
 	nlh = __mnlg_msg_prepare(nlg, CTRL_CMD_GETFAMILY,
 				 NLM_F_REQUEST | NLM_F_ACK, GENL_ID_CTRL, 1);
-	mnl_attr_put_u16(nlh, CTRL_ATTR_FAMILY_ID, nlg->id);
+	mnl_attr_put_u16(nlh, CTRL_ATTR_FAMILY_ID, nlg->devlink_id);
 
 	err = mnlg_socket_send(nlg, nlh);
 	if (err < 0)
@@ -260,7 +311,8 @@ static int get_family_id_cb(const struct nlmsghdr *nlh, void *data)
 	return MNL_CB_OK;
 }
 
-struct mnlg_socket *mnlg_socket_open(const char *family_name, uint8_t version)
+struct mnlg_socket *mnlg_socket_open(const char *family_name, uint8_t version,
+				     bool debug)
 {
 	struct mnlg_socket *nlg;
 	struct nlmsghdr *nlh;
@@ -274,6 +326,8 @@ struct mnlg_socket *mnlg_socket_open(const char *family_name, uint8_t version)
 	nlg->buf = malloc(MNL_SOCKET_BUFFER_SIZE);
 	if (!nlg->buf)
 		goto err_buf_alloc;
+
+	nlg->pretty_print = debug;
 
 	nlg->nl = mnl_socket_open(NETLINK_GENERIC);
 	if (!nlg->nl)
@@ -297,7 +351,7 @@ struct mnlg_socket *mnlg_socket_open(const char *family_name, uint8_t version)
 	if (err < 0)
 		goto err_mnlg_socket_send;
 
-	err = mnlg_socket_recv_run(nlg, get_family_id_cb, &nlg->id);
+	err = mnlg_socket_recv_run(nlg, get_family_id_cb, &nlg->devlink_id);
 	if (err < 0)
 		goto err_mnlg_socket_recv_run;
 
