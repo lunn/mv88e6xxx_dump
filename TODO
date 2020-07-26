@@ -1,0 +1,13 @@
+TODO
+====
+
+Fix auto device detections
+Decode global1 and global2 registers
+Add --port <> and --ports
+Add --vtu
+Add --serdev <> and --serdeses
+Add --hidden
+Add --scratch
+Add ...
+Test on more than 6390
+autotools
