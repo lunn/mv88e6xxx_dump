@@ -11,7 +11,7 @@
 #include "mnlg.h"
 #include "utils.h"
 
-/* All snapshots used by this program have this ID. */
+/* All single snapshots used by this program have this ID. */
 #define SNAPSHOT_ID 42
 #define MAX_SNAPSHOT_DATA 64 * 1024
 
@@ -42,6 +42,8 @@
 #define MV88E6351	6351
 #define MV88E6390	6390
 
+#define MAX_PORTS 11
+
 struct mv88e6xxx_ctx
 {
 	struct mnlg_socket *nlg;
@@ -51,6 +53,7 @@ struct mv88e6xxx_ctx
 	bool repeat;
 	uint8_t snapshot_data[MAX_SNAPSHOT_DATA];
 	size_t data_len;
+	uint16_t port_regs[MAX_PORTS][32];
 };
 
 struct mv88e6xxx_devlink_atu_entry {
@@ -71,6 +74,7 @@ void usage(const char *progname)
 	printf("  --device/-d\tDump this device\n");
 	printf("  --atu\t\tDump the ATU\n");
 	printf("  --vtu\t\tDump the VTU\n");
+	printf("  --ports\tDump all ports in a table\n");
 	printf("  --global1\tDump global1 registers\n");
 	printf("  --global2\tDump globAL2 registers\n");
 
@@ -378,7 +382,8 @@ static void delete_snapshots(struct mv88e6xxx_ctx *ctx)
 	} while (ctx->repeat);
 }
 
-static int new_snapshot(struct mv88e6xxx_ctx *ctx, const char *region_name)
+static int new_snapshot_id(struct mv88e6xxx_ctx *ctx, const char *region_name,
+			   uint32_t id)
 {
 	struct nlmsghdr *nlh;
         int err;
@@ -389,13 +394,18 @@ static int new_snapshot(struct mv88e6xxx_ctx *ctx, const char *region_name)
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_BUS_NAME, ctx->bus_name);
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_DEV_NAME, ctx->dev_name);
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_REGION_NAME, region_name);
-	mnl_attr_put_u32(nlh, DEVLINK_ATTR_REGION_SNAPSHOT_ID, SNAPSHOT_ID);
+	mnl_attr_put_u32(nlh, DEVLINK_ATTR_REGION_SNAPSHOT_ID, id);
 
         err = _mnlg_socket_sndrcv(ctx->nlg, nlh, NULL, NULL);
 	if (err)
 		printf("Unable to snapshot %s\n", region_name);
 
 	return err;
+}
+
+static int new_snapshot(struct mv88e6xxx_ctx *ctx, const char *region_name)
+{
+	return new_snapshot_id(ctx, region_name, SNAPSHOT_ID);
 }
 
 void dump_snapshot_add_data(struct mv88e6xxx_ctx *ctx,
@@ -450,7 +460,8 @@ static int dump_snapshot_cb(const struct nlmsghdr *nlh, void *data)
         return MNL_CB_OK;
 }
 
-static int dump_snapshot(struct mv88e6xxx_ctx *ctx, const char *region_name)
+static int dump_snapshot_id(struct mv88e6xxx_ctx *ctx, const char *region_name,
+			    uint32_t id)
 {
 	struct nlmsghdr *nlh;
         int err;
@@ -461,13 +472,158 @@ static int dump_snapshot(struct mv88e6xxx_ctx *ctx, const char *region_name)
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_BUS_NAME, ctx->bus_name);
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_DEV_NAME, ctx->dev_name);
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_REGION_NAME, region_name);
-	mnl_attr_put_u32(nlh, DEVLINK_ATTR_REGION_SNAPSHOT_ID, SNAPSHOT_ID);
+	mnl_attr_put_u32(nlh, DEVLINK_ATTR_REGION_SNAPSHOT_ID, id);
 
         err = _mnlg_socket_sndrcv(ctx->nlg, nlh, dump_snapshot_cb, ctx);
 	if (err)
 		printf("Unable to dump snapshot %s\n", region_name);
 
 	return err;
+}
+
+static int dump_snapshot(struct mv88e6xxx_ctx *ctx, const char *region_name)
+{
+	return dump_snapshot_id(ctx, region_name, SNAPSHOT_ID);
+}
+
+static int port_dump(struct mv88e6xxx_ctx *ctx, int port)
+{
+	char region_name[32];
+	int err, reg;
+	uint16_t *p;
+
+	sprintf(region_name, "port%d", port);
+
+ 	err = new_snapshot_id(ctx, region_name, SNAPSHOT_ID + port);
+	if (err) {
+		printf("%s: port %d err %d\n", __func__, port, err);
+		return err;
+	}
+
+	err = dump_snapshot_id(ctx, region_name, SNAPSHOT_ID + port);
+	if (err)
+		return err;
+
+	p = (uint16_t *)ctx->snapshot_data;
+	for (reg = 0; reg < 32; reg++)
+		ctx->port_regs[port][reg] = p[reg];
+
+	return 0;
+}
+
+static const char *mv88e6352_port_reg_names[32] = {
+	"Port status",
+	"Physical control",
+	"Jamming control",
+	"Switch ID",
+	"Port control",
+	"Port control 1",
+	"Port base VLAN map",
+	"Def VLAN ID & Prio",
+	"Port control 2",
+	"Egress rate control",
+	"Egress rate control 2",
+	"Port associatopn vec",
+	"Port ATU control",
+	"Override",
+	"Policy control",
+	"Port ether type",
+	"In discard low",
+	"In discard high",
+	"In filtered",
+	"RX frame count",
+	"Reserved",
+	"Reserved",
+	"LED control",
+	"Reserved",
+	"Tag remap low",
+	"Tag remap high",
+	"Reserved",
+	"Queue counters",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+};
+
+static const char *mv88e6390_port_reg_names[32] = {
+	"Port status",
+	"Physical control",
+	"Flow control",
+	"Switch ID",
+	"Port control",
+	"Port control 1",
+	"Port base VLAN map",
+	"Def VLAN ID & Prio",
+	"Port control 2",
+	"Egress rate control",
+	"Egress rate control 2",
+	"Port associatopn vec",
+	"Port ATU control",
+	"Override",
+	"Policy control",
+	"Port ether type",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"LED control",
+	"IP prio map table",
+	"IEEE prio map table",
+	"Port control 3",
+	"Reserved",
+	"Queue counters",
+	"Queue control",
+	"Reserved",
+	"Cut through control",
+	"Debug counters",
+};
+
+static void ports_print(struct mv88e6xxx_ctx *ctx, int ports)
+{
+	int port, reg;
+
+	for (reg = 0; reg < 32; reg++) {
+		printf("%02x ", reg);
+
+		switch (ctx->chip) {
+		case MV88E6190:
+		case MV88E6191:
+		case MV88E6290:
+		case MV88E6390:
+			printf("%22s ", mv88e6390_port_reg_names[reg]);
+			break;
+		case MV88E6171:
+		case MV88E6175:
+		case MV88E6350:
+		case MV88E6351:
+		case MV88E6172:
+		case MV88E6176:
+		case MV88E6240:
+		case MV88E6352:
+			printf("%22s ", mv88e6352_port_reg_names[reg]);
+			break;
+		}
+
+		for (port = 0; port < ports; port++)
+			printf("%04x ", ctx->port_regs[port][reg]);
+		putchar('\n');
+	}
+}
+
+static void ports(struct mv88e6xxx_ctx *ctx)
+{
+	int port;
+	int err;
+
+	for (port = 0; port < MAX_PORTS; port++) {
+		err = port_dump(ctx, port);
+		if (err)
+			break;
+	}
+	ports_print(ctx, port - 1);
 }
 
 static char *binary(char *buffer, int val, int bits)
@@ -535,7 +691,7 @@ static const char *mv88e6xxx_multicaststate2str(uint8_t state)
 	exit(EXIT_FAILURE);
 }
 
-static char ports[]="0123456789ABCDEF";
+static char ports_labels[]="0123456789ABCDEF";
 
 static void atu_mv88e6xxx(struct mv88e6xxx_ctx *ctx, uint16_t portvec_mask,
 			  int portvec_bits)
@@ -552,7 +708,7 @@ static void atu_mv88e6xxx(struct mv88e6xxx_ctx *ctx, uint16_t portvec_mask,
 
 	printf("FID  MAC               T ");
 	for (i = 0; i < portvec_bits; i++)
-		putchar(ports[i]);
+		putchar(ports_labels[i]);
 	printf(" Prio State\n");
 
 	for (i = 0; i < entries; i++) {
@@ -813,6 +969,7 @@ int main(int argc, char * argv[])
 	bool do_vtu = false;
 	bool do_global1 = false;
 	bool do_global2 = false;
+	bool do_ports = false;
 	bool do_list = false;
 	bool have_device = false;
 	bool debug = false;
@@ -822,6 +979,7 @@ int main(int argc, char * argv[])
 		{"vtu",	    no_argument,       0,  0 },
 		{"global1", no_argument,       0,  0 },
 		{"global2", no_argument,       0,  0 },
+		{"ports",   no_argument,       0,  0 },
 		{"device",  required_argument, 0, 'd'},
 		{"list",    no_argument,       0, 'l'},
 		{"debug",   no_argument,       0, 'D'},
@@ -853,6 +1011,8 @@ int main(int argc, char * argv[])
 			case 3:
 				do_global2 = true;
 				break;
+			case 4:
+				do_ports = true;
 			}
 			break;
 		case 'd':
@@ -899,6 +1059,11 @@ int main(int argc, char * argv[])
 	get_info(&ctx);
 
 	delete_snapshots(&ctx);
+
+	if (do_ports) {
+		ports(&ctx);
+		delete_snapshots(&ctx);
+	}
 
 	if (do_atu) {
 		atu(&ctx);
