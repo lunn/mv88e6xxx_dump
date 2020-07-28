@@ -1,0 +1,32 @@
+
+# mv88e6xx_dump
+
+
+## Building
+
+### options and dependencies
+
+The only dependency of the mv88e6xx_dump program is the libmnl library.
+
+### configure, compile and install
+
+Building from git for target iMX6 with a generic toolchain:
+```
+  $ NOCONFIGURE=1 ./autogen.sh
+  $ ./configure --host=arm-linux-gnueabihf --prefix=/opt/test
+  $ make
+  $ sudo make install
+```
+
+### build a source tarball
+
+Building a source release tarball:
+```
+  // update configure.ac to increase the version number, e.g. to 0.2.0
+  $ git tag 0.2.0
+  $ NOCONFIGURE=1 ./autogen.sh
+  $ ./configure
+  $ make
+  $ make distcheck
+```
+
