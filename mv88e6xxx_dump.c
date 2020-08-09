@@ -521,6 +521,369 @@ static int port_dump(struct mv88e6xxx_ctx *ctx, int port)
 	return 0;
 }
 
+#define FIELD(_name, _fmt, ...) \
+	printf("      %-36.36s " _fmt "\n", _name, ##__VA_ARGS__)
+
+#define FIELD_BITMAP(_name, _val) \
+	FIELD(_name, "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s", \
+	      ((_val) & 0x0001) ? "0 " : "", \
+	      ((_val) & 0x0002) ? "1 " : "", \
+	      ((_val) & 0x0004) ? "2 " : "", \
+	      ((_val) & 0x0008) ? "3 " : "", \
+	      ((_val) & 0x0010) ? "4 " : "", \
+	      ((_val) & 0x0020) ? "5 " : "", \
+	      ((_val) & 0x0040) ? "6 " : "", \
+	      ((_val) & 0x0080) ? "7 " : "", \
+	      ((_val) & 0x0100) ? "8 " : "", \
+	      ((_val) & 0x0200) ? "9 " : "", \
+	      ((_val) & 0x0400) ? "10 " : "", \
+	      ((_val) & 0x0800) ? "11 " : "", \
+	      ((_val) & 0x1000) ? "12 " : "", \
+	      ((_val) & 0x2000) ? "13 " : "", \
+	      ((_val) & 0x4000) ? "14 " : "", \
+	      ((_val) & 0x8000) ? "15 " : "")
+
+static void port_6161(int reg, uint16_t val)
+{
+	switch (reg) {
+	case 0:
+		FIELD("Pause Enabled", "%u", !!(val & 0x8000));
+		FIELD("My Pause", "%u", !!(val & 0x4000));
+		FIELD("Half-duplex Flow Control", "%u", !!(val & 0x2000));
+		FIELD("802.3 PHY Detected", "%u", !!(val & 0x1000));
+		FIELD("Link Status", "%s", val & 0x0800 ? "Up" : "Down");
+		FIELD("Duplex", "%s", val & 0x0400 ? "Full" : "Half");
+		FIELD("Speed", "%s",
+		      (val & 0x0300) == 0x0000 ? "10 Mbps" :
+		      (val & 0x0300) == 0x0100 ? "100 Mbps" :
+		      (val & 0x0300) == 0x0200 ? "1000 Mbps" :
+		      (val & 0x0300) == 0x0300 ? "Reserved" : "?");
+		FIELD("Auto-Media Detect Disable", "%u", !!(val & 0x0040));
+		FIELD("Transmitter Paused", "%u", !!(val & 0x0020));
+		FIELD("Flow Control", "%u", !!(val & 0x0010));
+		FIELD("Config Duplex", "%s", val & 0x0008 ? "Full" : "Half");
+		FIELD("Config Mode", "0x%x", val & 0x0007);
+		break;
+	case 1:
+		FIELD("Flow Control's Forced value", "%u", !!(val & 0x0080));
+		FIELD("Force Flow Control", "%u", !!(val & 0x0040));
+		FIELD("Link's Forced value", "%s", val & 0x0020 ? "Up" : "Down");
+		FIELD("Force Link", "%u", !!(val & 0x0010));
+		FIELD("Duplex's Forced value", "%s", val & 0x0008 ? "Full" :
+		      "Half");
+		FIELD("Force Duplex", "%u", !!(val & 0x0004));
+		FIELD("Force Speed", "%s",
+		      (val & 0x0003) == 0x0000 ? "10 Mbps" :
+		      (val & 0x0003) == 0x0001 ? "100 Mbps" :
+		      (val & 0x0003) == 0x0002 ? "1000 Mbps" :
+		      (val & 0x0003) == 0x0003 ? "Not forced" : "?");
+		break;
+	case 4:
+		FIELD("Source Address Filtering controls", "%s",
+		      (val & 0xc000) == 0x0000 ? "Disabled" :
+		      (val & 0xc000) == 0x4000 ? "Drop On Lock" :
+		      (val & 0xc000) == 0x8000 ? "Drop On Unlock" :
+		      (val & 0xc000) == 0xc000 ? "Drop to CPU" : "?");
+		FIELD("Egress Mode", "%s",
+		      (val & 0x3000) == 0x0000 ? "Unmodified" :
+		      (val & 0x3000) == 0x1000 ? "Untagged" :
+		      (val & 0x3000) == 0x2000 ? "Tagged" :
+		      (val & 0x3000) == 0x3000 ? "Reserved" : "?");
+		FIELD("Ingress & Egress Header Mode", "%u", !!(val & 0x0800));
+		FIELD("IGMP and MLD Snooping", "%u", !!(val & 0x0400));
+		FIELD("Frame Mode", "%s",
+		      (val & 0x0300) == 0x0000 ? "Normal" :
+		      (val & 0x0300) == 0x0100 ? "DSA" :
+		      (val & 0x0300) == 0x0200 ? "Provider" :
+		      (val & 0x0300) == 0x0300 ? "Ether Type DSA" : "?");
+		FIELD("VLAN Tunnel", "%u", !!(val & 0x0080));
+		FIELD("TagIfBoth", "%u", !!(val & 0x0040));
+		FIELD("Initial Priority assignment", "%s",
+		      (val & 0x0030) == 0x0000 ? "Defaults" :
+		      (val & 0x0030) == 0x0010 ? "Tag Priority" :
+		      (val & 0x0030) == 0x0020 ? "IP Priority" :
+		      (val & 0x0030) == 0x0030 ? "Tag & IP Priority" : "?");
+		FIELD("Egress Flooding mode", "%s",
+		      (val & 0x000c) == 0x0000 ? "No unknown DA" :
+		      (val & 0x000c) == 0x0004 ? "No unknown multicast DA" :
+		      (val & 0x000c) == 0x0008 ? "No unknown unicast DA" :
+		      (val & 0x000c) == 0x000c ? "Allow unknown DA" : "?");
+		FIELD("Port State", "%s",
+		      (val & 0x0003) == 0x0000 ? "Disabled" :
+		      (val & 0x0003) == 0x0001 ? "Blocking/Listening" :
+		      (val & 0x0003) == 0x0002 ? "Learning" :
+		      (val & 0x0003) == 0x0003 ? "Forwarding" : "?");
+		break;
+	case 5:
+		FIELD("Message Port", "%u", !!(val & 0x8000));
+		FIELD("Trunk Port", "%u", !!(val & 0x4000));
+		FIELD("Trunk ID", "%u", (val & 0x0f00) >> 8);
+		FIELD("FID[5:4]", "0x%.2x", (val & 0x0003) << 4);
+		break;
+	case 6:
+		FIELD("FID[3:0]", "0x%.2x", (val & 0xf000) >> 12);
+		FIELD_BITMAP("VLANTable", val & 0x003f);
+		break;
+	case 7:
+		FIELD("Default Priority", "0x%x", (val & 0xe000) >> 13);
+		FIELD("Force to use Default VID", "%u", !!(val & 0x1000));
+		FIELD("Default VLAN Identifier", "%u", val & 0x0fff);
+		break;
+	case 8:
+		FIELD("Force good FCS in the frame", "%u", !!(val & 0x8000));
+		FIELD("Jumbo Mode", "%s",
+		      (val & 0x3000) == 0x0000 ? "1522" :
+		      (val & 0x3000) == 0x1000 ? "2048" :
+		      (val & 0x3000) == 0x2000 ? "10240" :
+		      (val & 0x3000) == 0x3000 ? "Reserved" : "?");
+		FIELD("802.1QMode", "%s",
+		      (val & 0x0c00) == 0x0000 ? "Disabled" :
+		      (val & 0x0c00) == 0x0400 ? "Fallback" :
+		      (val & 0x0c00) == 0x0800 ? "Check" :
+		      (val & 0x0c00) == 0x0c00 ? "Secure" : "?");
+		FIELD("Discard Tagged Frames", "%u", !!(val & 0x0200));
+		FIELD("Discard Untagged Frames", "%u", !!(val & 0x0100));
+		FIELD("Map using DA hits", "%u", !!(val & 0x0080));
+		FIELD("ARP Mirror enable", "%u", !!(val & 0x0040));
+		FIELD("Egress Monitor Source Port", "%u", !!(val & 0x0020));
+		FIELD("Ingress Monitor Source Port", "%u", !!(val & 0x0010));
+		break;
+	}
+}
+
+static void port_6352(int reg, uint16_t val)
+{
+	switch (reg) {
+	case 0:
+		FIELD("Pause Enabled", "%u", !!(val & 0x8000));
+		FIELD("My Pause", "%u", !!(val & 0x4000));
+		FIELD("802.3 PHY Detected", "%u", !!(val & 0x1000));
+		FIELD("Link Status", "%s", val & 0x0800 ? "Up" : "Down");
+		FIELD("Duplex", "%s", val & 0x0400 ? "Full" : "Half");
+		FIELD("Speed", "%s",
+		      (val & 0x0300) == 0x0000 ? "10 Mbps" :
+		      (val & 0x0300) == 0x0100 ? "100 or 200 Mbps" :
+		      (val & 0x0300) == 0x0200 ? "1000 Mbps" :
+		      (val & 0x0300) == 0x0300 ? "Reserved" : "?");
+		FIELD("EEE Enabled", "%u", !!(val & 0x0040));
+		FIELD("Transmitter Paused", "%u", !!(val & 0x0020));
+		FIELD("Flow Control", "%u", !!(val & 0x0010));
+		FIELD("Config Mode", "0x%x", val & 0x000f);
+		break;
+	case 1:
+		FIELD("RGMII Receive Timing Control", "%s", val & 0x8000 ?
+		      "Delay" : "Default");
+		FIELD("RGMII Transmit Timing Control", "%s", val & 0x4000 ?
+		      "Delay" : "Default");
+		FIELD("200 BASE Mode", "%s", val & 0x1000 ? "200" : "100");
+		FIELD("Flow Control's Forced value", "%u", !!(val & 0x0080));
+		FIELD("Force Flow Control", "%u", !!(val & 0x0040));
+		FIELD("Link's Forced value", "%s", val & 0x0020 ? "Up" : "Down");
+		FIELD("Force Link", "%u", !!(val & 0x0010));
+		FIELD("Duplex's Forced value", "%s", val & 0x0008 ?
+		      "Full" : "Half");
+		FIELD("Force Duplex", "%u", !!(val & 0x0004));
+		FIELD("Force Speed", "%s",
+		      (val & 0x0003) == 0x0000 ? "10 Mbps" :
+		      (val & 0x0003) == 0x0001 ? "100 or 200 Mbps" :
+		      (val & 0x0003) == 0x0002 ? "1000 Mbps" :
+		      (val & 0x0003) == 0x0003 ? "Not forced" : "?");
+		break;
+	case 4:
+		FIELD("Source Address Filtering controls", "%s",
+		      (val & 0xc000) == 0x0000 ? "Disabled" :
+		      (val & 0xc000) == 0x4000 ? "Drop On Lock" :
+		      (val & 0xc000) == 0x8000 ? "Drop On Unlock" :
+		      (val & 0xc000) == 0xc000 ? "Drop to CPU" : "?");
+		FIELD("Egress Mode", "%s",
+		      (val & 0x3000) == 0x0000 ? "Unmodified" :
+		      (val & 0x3000) == 0x1000 ? "Untagged" :
+		      (val & 0x3000) == 0x2000 ? "Tagged" :
+		      (val & 0x3000) == 0x3000 ? "Reserved" : "?");
+		FIELD("Ingress & Egress Header Mode", "%u", !!(val & 0x0800));
+		FIELD("IGMP and MLD Snooping", "%u", !!(val & 0x0400));
+		FIELD("Frame Mode", "%s",
+		      (val & 0x0300) == 0x0000 ? "Normal" :
+		      (val & 0x0300) == 0x0100 ? "DSA" :
+		      (val & 0x0300) == 0x0200 ? "Provider" :
+		      (val & 0x0300) == 0x0300 ? "Ether Type DSA" : "?");
+		FIELD("VLAN Tunnel", "%u", !!(val & 0x0080));
+		FIELD("TagIfBoth", "%u", !!(val & 0x0040));
+		FIELD("Initial Priority assignment", "%s",
+		      (val & 0x0030) == 0x0000 ? "Defaults" :
+		      (val & 0x0030) == 0x0010 ? "Tag Priority" :
+		      (val & 0x0030) == 0x0020 ? "IP Priority" :
+		      (val & 0x0030) == 0x0030 ? "Tag & IP Priority" : "?");
+		FIELD("Egress Flooding mode", "%s",
+		      (val & 0x000c) == 0x0000 ? "No unknown DA" :
+		      (val & 0x000c) == 0x0004 ? "No unknown multicast DA" :
+		      (val & 0x000c) == 0x0008 ? "No unknown unicast DA" :
+		      (val & 0x000c) == 0x000c ? "Allow unknown DA" : "?");
+		FIELD("Port State", "%s",
+		      (val & 0x0003) == 0x0000 ? "Disabled" :
+		      (val & 0x0003) == 0x0001 ? "Blocking/Listening" :
+		      (val & 0x0003) == 0x0002 ? "Learning" :
+		      (val & 0x0003) == 0x0003 ? "Forwarding" : "?");
+		break;
+	case 5:
+		FIELD("Message Port", "%u", !!(val & 0x8000));
+		FIELD("Trunk Port", "%u", !!(val & 0x4000));
+		FIELD("Trunk ID", "%u", (val & 0x0f00) >> 8);
+		FIELD("FID[11:4]", "0x%.3x", (val & 0x00ff) << 4);
+		break;
+	case 6:
+		FIELD("FID[3:0]", "0x%.3x", (val & 0xf000) >> 12);
+		FIELD_BITMAP("VLANTable", val & 0x007f);
+		break;
+	case 7:
+		FIELD("Default Priority", "0x%x", (val & 0xe000) >> 13);
+		FIELD("Force to use Default VID", "%u", !!(val & 0x1000));
+		FIELD("Default VLAN Identifier", "%u", val & 0x0fff);
+		break;
+	case 8:
+		FIELD("Force good FCS in the frame", "%u", !!(val & 0x8000));
+		FIELD("Jumbo Mode", "%s",
+		      (val & 0x3000) == 0x0000 ? "1522" :
+		      (val & 0x3000) == 0x1000 ? "2048" :
+		      (val & 0x3000) == 0x2000 ? "10240" :
+		      (val & 0x3000) == 0x3000 ? "Reserved" : "?");
+		FIELD("802.1QMode", "%s",
+		      (val & 0x0c00) == 0x0000 ? "Disabled" :
+		      (val & 0x0c00) == 0x0400 ? "Fallback" :
+		      (val & 0x0c00) == 0x0800 ? "Check" :
+		      (val & 0x0c00) == 0x0c00 ? "Secure" : "?");
+		FIELD("Discard Tagged Frames", "%u", !!(val & 0x0200));
+		FIELD("Discard Untagged Frames", "%u", !!(val & 0x0100));
+		FIELD("Map using DA hits", "%u", !!(val & 0x0080));
+		FIELD("ARP Mirror enable", "%u", !!(val & 0x0040));
+		FIELD("Egress Monitor Source Port", "%u", !!(val & 0x0020));
+		FIELD("Ingress Monitor Source Port", "%u", !!(val & 0x0010));
+		FIELD("Use Default Queue Priority", "%u", !!(val & 0x0008));
+		FIELD("Default Queue Priority", "0x%x", (val & 0x0006) >> 1);
+		break;
+	}
+};
+
+static void port_6390(int reg, uint16_t val)
+{
+	switch (reg) {
+	case 0:
+		FIELD("Transmit Pause Enable bit", "%u", !!(val & 0x8000));
+		FIELD("Receive Pause Enable bit", "%u", !!(val & 0x4000));
+		FIELD("802.3 PHY Detected", "%u", !!(val & 0x1000));
+		FIELD("Link Status", "%s", val & 0x0800 ? "Up" : "Down");
+		FIELD("Duplex", "%s", val & 0x0400 ? "Full" : "Half");
+		FIELD("Speed", "%s",
+		      (val & 0x0300) == 0x0000 ? "10 Mbps" :
+		      (val & 0x0300) == 0x0100 ? "100 or 200 Mbps" :
+		      (val & 0x0300) == 0x0200 ? "1000 Mbps" :
+		      (val & 0x0300) == 0x0300 ? "10 Gb or 2500 Mbps" : "?");
+		FIELD("Duplex Fixed", "%u", !!(val & 0x0080));
+		FIELD("EEE Enabled", "%u", !!(val & 0x0040));
+		FIELD("Transmitter Paused", "%u", !!(val & 0x0020));
+		FIELD("Flow Control", "%u", !!(val & 0x0010));
+		FIELD("Config Mode", "0x%x", val & 0x000f);
+		break;
+	case 1:
+		FIELD("RGMII Receive Timing Control", "%s", val & 0x8000 ?
+		      "Delay" : "Default");
+		FIELD("RGMII Transmit Timing Control", "%s", val & 0x4000 ?
+		      "Delay" : "Default");
+		FIELD("Force Speed", "%u", !!(val & 0x2000));
+		FIELD("Alternate Speed Mode", "%s", val & 0x1000 ?
+		      "Alternate" : "Normal");
+		FIELD("MII PHY Mode", "%s", val & 0x0800 ? "PHY" : "MAC");
+		FIELD("EEE force value", "%u", !!(val & 0x0200));
+		FIELD("Force EEE", "%u", !!(val & 0x0100));
+		FIELD("Link's Forced value", "%s", val & 0x0020 ? "Up" : "Down");
+		FIELD("Force Link", "%u", !!(val & 0x0010));
+		FIELD("Duplex's Forced value", "%s", val & 0x0008 ? "Full" :
+		      "Half");
+		FIELD("Force Duplex", "%u", !!(val & 0x0004));
+		FIELD("Force Speed", "%s",
+		      (val & 0x0003) == 0x0000 ? "10 Mbps" :
+		      (val & 0x0003) == 0x0001 ? "100 or 200 Mbps" :
+		      (val & 0x0003) == 0x0002 ? "1000 Mbps" :
+		      (val & 0x0003) == 0x0003 ? "10 Gb or 2500 Mbps" : "?");
+		break;
+	case 4:
+		FIELD("Source Address Filtering controls", "%s",
+		      (val & 0xc000) == 0x0000 ? "Disabled" :
+		      (val & 0xc000) == 0x4000 ? "Drop On Lock" :
+		      (val & 0xc000) == 0x8000 ? "Drop On Unlock" :
+		      (val & 0xc000) == 0xc000 ? "Drop to CPU" : "?");
+		FIELD("Egress Mode", "%s",
+		      (val & 0x3000) == 0x0000 ? "Unmodified" :
+		      (val & 0x3000) == 0x1000 ? "Untagged" :
+		      (val & 0x3000) == 0x2000 ? "Tagged" :
+		      (val & 0x3000) == 0x3000 ? "Reserved" : "?");
+		FIELD("Ingress & Egress Header Mode", "%u", !!(val & 0x0800));
+		FIELD("IGMP and MLD Snooping", "%u", !!(val & 0x0400));
+		FIELD("Frame Mode", "%s",
+		      (val & 0x0300) == 0x0000 ? "Normal" :
+		      (val & 0x0300) == 0x0100 ? "DSA" :
+		      (val & 0x0300) == 0x0200 ? "Provider" :
+		      (val & 0x0300) == 0x0300 ? "Ether Type DSA" : "?");
+		FIELD("VLAN Tunnel", "%u", !!(val & 0x0080));
+		FIELD("TagIfBoth", "%u", !!(val & 0x0040));
+		FIELD("Initial Priority assignment", "%s",
+		      (val & 0x0030) == 0x0000 ? "Defaults" :
+		      (val & 0x0030) == 0x0010 ? "Tag Priority" :
+		      (val & 0x0030) == 0x0020 ? "IP Priority" :
+		      (val & 0x0030) == 0x0030 ? "Tag & IP Priority" : "?");
+		FIELD("Egress Flooding mode", "%s",
+		      (val & 0x000c) == 0x0000 ? "No unknown DA" :
+		      (val & 0x000c) == 0x0004 ? "No unknown multicast DA" :
+		      (val & 0x000c) == 0x0008 ? "No unknown unicast DA" :
+		      (val & 0x000c) == 0x000c ? "Allow unknown DA" : "?");
+		FIELD("Port State", "%s",
+		      (val & 0x0003) == 0x0000 ? "Disabled" :
+		      (val & 0x0003) == 0x0001 ? "Blocking/Listening" :
+		      (val & 0x0003) == 0x0002 ? "Learning" :
+		      (val & 0x0003) == 0x0003 ? "Forwarding" : "?");
+		break;
+	case 5:
+		FIELD("Message Port", "%u", !!(val & 0x8000));
+		FIELD("LAG Port", "%u", !!(val & 0x4000));
+		FIELD("VTU Page", "%u", !!(val & 0x2000));
+		FIELD("LAG ID", "%u", (val & 0x0f00) >> 8);
+		FIELD("FID[11:4]", "0x%.3x", (val & 0x00ff) << 4);
+		break;
+	case 6:
+		FIELD("FID[3:0]", "0x%.3x", (val & 0xf000) >> 12);
+		FIELD("Force Mapping", "%u", !!(val & 0x0800));
+		FIELD_BITMAP("VLANTable", val & 0x007ff);
+		break;
+	case 7:
+		FIELD("Default Priority", "0x%x", (val & 0xe000) >> 13);
+		FIELD("Force to use Default VID", "%u", !!(val & 0x1000));
+		FIELD("Default VLAN Identifier", "%u", val & 0x0fff);
+		break;
+	case 8:
+		FIELD("Force good FCS in the frame", "%u", !!(val & 0x8000));
+		FIELD("Allow bad FCS", "%u", !!(val & 0x4000));
+		FIELD("Jumbo Mode", "%s",
+		      (val & 0x3000) == 0x0000 ? "1522" :
+		      (val & 0x3000) == 0x1000 ? "2048" :
+		      (val & 0x3000) == 0x2000 ? "10240" :
+		      (val & 0x3000) == 0x3000 ? "Reserved" : "?");
+		FIELD("802.1QMode", "%s",
+		      (val & 0x0c00) == 0x0000 ? "Disabled" :
+		      (val & 0x0c00) == 0x0400 ? "Fallback" :
+		      (val & 0x0c00) == 0x0800 ? "Check" :
+		      (val & 0x0c00) == 0x0c00 ? "Secure" : "?");
+		FIELD("Discard Tagged Frames", "%u", !!(val & 0x0200));
+		FIELD("Discard Untagged Frames", "%u", !!(val & 0x0100));
+		FIELD("Map using DA hits", "%u", !!(val & 0x0080));
+		FIELD("ARP Mirror enable", "%u", !!(val & 0x0040));
+		FIELD("Egress Monitor Source Port", "%u", !!(val & 0x0020));
+		FIELD("Ingress Monitor Source Port", "%u", !!(val & 0x0010));
+		FIELD("Allow VID of Zero", "%u", !!(val & 0x0008));
+		FIELD("Default Queue Priority", "0x%x", val & 0x0007);
+		break;
+	}
+};
+
 static const char *mv88e6161_port_reg_names[32] = {
 	"Port status",
 	"Physical control",
@@ -766,6 +1129,94 @@ static const char *mv88e6390_port_reg_names[32] = {
 	"Debug counters",
 };
 
+static void ports_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
+{
+	printf("%02x ", reg);
+
+	switch (ctx->chip) {
+	case MV88E6190:
+	case MV88E6191:
+	case MV88E6290:
+	case MV88E6390:
+		printf("%-22s ", mv88e6390_port_reg_names[reg]);
+		break;
+	case MV88E6171:
+	case MV88E6175:
+	case MV88E6350:
+	case MV88E6351:
+	case MV88E6172:
+	case MV88E6176:
+	case MV88E6240:
+	case MV88E6352:
+		printf("%-22s ", mv88e6352_port_reg_names[reg]);
+		break;
+	case MV88E6131:
+	case MV88E6185:
+		printf("%-22s ", mv88e6185_port_reg_names[reg]);
+		break;
+	case MV88E6320:
+	case MV88E6321:
+		printf("%-22s ", mv88e6321_port_reg_names[reg]);
+		break;
+	case MV88E6341:
+	case MV88E6141:
+		printf("%-22s ", mv88e6341_port_reg_names[reg]);
+		break;
+	case MV88E6165:
+		printf("%-22s ", mv88e6165_port_reg_names[reg]);
+		break;
+	case MV88E6123:
+	case MV88E6161:
+		printf("%-22s ", mv88e6161_port_reg_names[reg]);
+		break;
+	}
+}
+
+static void cmd_port(struct mv88e6xxx_ctx *ctx, int port)
+{
+	uint16_t val;
+	int reg;
+	int err;
+
+	err = port_dump(ctx, port);
+	if (err) {
+		printf("Error dumping port\n");
+		exit(EXIT_FAILURE);
+	}
+
+	for (reg = 0 ; reg < 32; reg++) {
+		ports_print_reg_name(ctx, reg);
+
+		val = ctx->port_regs[port][reg];
+		printf("                0x%04x\n", val);
+
+		switch (ctx->chip) {
+		case MV88E6190:
+		case MV88E6191:
+		case MV88E6290:
+		case MV88E6390:
+			port_6390(reg, val);
+			break;
+		case MV88E6123:
+		case MV88E6161:
+			port_6161(reg, val);
+			break;
+		case MV88E6171:
+		case MV88E6175:
+		case MV88E6350:
+		case MV88E6351:
+		case MV88E6172:
+		case MV88E6176:
+		case MV88E6240:
+		case MV88E6352:
+			port_6352(reg, val);
+			break;
+		default:
+			printf("%02x %04x\n",  reg, val);
+		}
+	}
+}
+
 static void ports_print(struct mv88e6xxx_ctx *ctx)
 {
 	int port, reg;
@@ -776,45 +1227,7 @@ static void ports_print(struct mv88e6xxx_ctx *ctx)
 	putchar('\n');
 
 	for (reg = 0; reg < 32; reg++) {
-		printf("%02x ", reg);
-
-		switch (ctx->chip) {
-		case MV88E6190:
-		case MV88E6191:
-		case MV88E6290:
-		case MV88E6390:
-			printf("%22s ", mv88e6390_port_reg_names[reg]);
-			break;
-		case MV88E6171:
-		case MV88E6175:
-		case MV88E6350:
-		case MV88E6351:
-		case MV88E6172:
-		case MV88E6176:
-		case MV88E6240:
-		case MV88E6352:
-			printf("%22s ", mv88e6352_port_reg_names[reg]);
-			break;
-		case MV88E6131:
-		case MV88E6185:
-			printf("%22s ", mv88e6185_port_reg_names[reg]);
-			break;
-		case MV88E6320:
-		case MV88E6321:
-			printf("%22s ", mv88e6321_port_reg_names[reg]);
-			break;
-		case MV88E6341:
-		case MV88E6141:
-			printf("%22s ", mv88e6341_port_reg_names[reg]);
-			break;
-		case MV88E6165:
-			printf("%22s ", mv88e6165_port_reg_names[reg]);
-			break;
-		case MV88E6123:
-		case MV88E6161:
-			printf("%22s ", mv88e6161_port_reg_names[reg]);
-			break;
-		}
+		ports_print_reg_name(ctx, reg);
 
 		for (port = 0; port <= ctx->ports; port++)
 			printf("%04x ", ctx->port_regs[port][reg]);
@@ -1179,6 +1592,8 @@ int main(int argc, char * argv[])
 	bool do_global1 = false;
 	bool do_global2 = false;
 	bool do_ports = false;
+	bool do_port = false;
+	int port;
 	bool do_list = false;
 	bool have_device = false;
 	bool debug = false;
@@ -1189,6 +1604,7 @@ int main(int argc, char * argv[])
 		{"global1", no_argument,       0,  0 },
 		{"global2", no_argument,       0,  0 },
 		{"ports",   no_argument,       0,  0 },
+		{"port",    required_argument, 0,  0 },
 		{"device",  required_argument, 0, 'd'},
 		{"list",    no_argument,       0, 'l'},
 		{"debug",   no_argument,       0, 'D'},
@@ -1222,6 +1638,10 @@ int main(int argc, char * argv[])
 				break;
 			case 4:
 				do_ports = true;
+				break;
+			case 5:
+				do_port = true;
+				port = atoi(optarg);
 				break;
 			}
 			break;
@@ -1269,6 +1689,15 @@ int main(int argc, char * argv[])
 	get_info(&ctx);
 
 	delete_snapshots(&ctx);
+
+	if (do_port) {
+		if (port > ctx.ports) {
+			printf("Port %d invalid\n");
+			exit(EXIT_FAILURE);
+		}
+		cmd_port(&ctx, port);
+		delete_snapshots(&ctx);
+	}
 
 	if (do_ports) {
 		cmd_ports(&ctx);
