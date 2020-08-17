@@ -32,9 +32,9 @@ EXTRA_DIST = README
 
 ################################################################################
 
-bin_PROGRAMS = mv88e6xx_dump
+bin_PROGRAMS = mv88e6xxx_dump
 
-mv88e6xx_dump_SOURCES =  \
+mv88e6xxx_dump_SOURCES =  \
 	libnetlink.h     \
 	mnlg.h           \
 	prettymsg.h      \
@@ -47,13 +47,13 @@ mv88e6xx_dump_SOURCES =  \
 	mv88e6xxx_dump.c \
 	$(NULL)
 
-mv88e6xx_dump_CPPFLAGS = \
+mv88e6xxx_dump_CPPFLAGS = \
         -I$(top_srcdir) \
         -I$(top_builddir) \
         $(LIBMNL_CFLAGS) \
         $(NULL)
 
-mv88e6xx_dump_LDFLAGS = \
+mv88e6xxx_dump_LDFLAGS = \
         $(LIBMNL_LIBS) \
         $(NULL)
 
