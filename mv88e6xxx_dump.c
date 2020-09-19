@@ -1461,6 +1461,185 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 		return;
 }
 
+static const char *mv88e6321_global1_reg_names[32] = {
+	"Global status", 		/* 0 */
+	"ATU FID",
+	"VTU FID",
+	"VTU SID",
+	"Global control",
+	"VTU operations",
+	"VTU VID",
+	"VTU/STU Data 0-3",
+	"VTU/STU Data 4-6",
+	"Reserved",
+	"ATU control",			/* 10 */
+	"ATU operations",
+	"ATU data",
+	"ATU MAC bytes 0 & 1",
+	"ATU MAC bytes 2 & 3",
+	"ATU MAC bytes 4 & 5",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",			/* 20 */
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"IEEE FPri to QPrio mapping",
+	"IP to QPri & FPrio mapping",
+	"Monitor control",
+	"Free queue size",
+	"Global control 2",
+	"Stats operation",
+	"Stats counter bytes 3 & 2", 	/* 30 */
+	"Stats counter bytes 1 & 0",
+};
+
+static const char *mv88e6185_global1_reg_names[32] = {
+	"Global status", 		/* 0 */
+	"Switch MAC bytes 0 & 1",
+	"Switch MAC bytes 2 & 3",
+	"Switch MAC bytes 4 & 5",
+	"Global control",
+	"VTU operations",
+	"VTU VID",
+	"VTU/STU Data 0-3",
+	"VTU/STU Data 4-7",
+	"VTU/STU Data 8-9",
+	"ATU control",			/* 10 */
+	"ATU operations",
+	"ATU data",
+	"ATU MAC bytes 0 & 1",
+	"ATU MAC bytes 2 & 3",
+	"ATU MAC bytes 4 & 5",
+	"IP-PRI mapping 0",
+	"IP-PRI mapping 1",
+	"IP-PRI mapping 2",
+	"IP-PRI mapping 3",
+	"IP-PRI mapping 4",		/* 20 */
+	"IP-PRI mapping 5",
+	"IP-PRI mapping 6",
+	"IP-PRI mapping 7",
+	"IEEE Pri",
+	"Core tag type",
+	"Monitor control",
+	"Reserved",
+	"Global control 2",
+	"Stats operation",
+	"Stats counter bytes 3 & 2", 	/* 30 */
+	"Stats counter bytes 1 & 0",
+};
+
+static const char *mv88e6352_global1_reg_names[32] = {
+	"Global status", 		/* 0 */
+	"ATU FID",
+	"VTU FID",
+	"VTU SID",
+	"Global control",
+	"VTU operations",
+	"VTU VID",
+	"VTU/STU Data 0-3",
+	"VTU/STU Data 4-6",
+	"Reserved",
+	"ATU control",			/* 10 */
+	"ATU operations",
+	"ATU data",
+	"ATU MAC bytes 0 & 1",
+	"ATU MAC bytes 2 & 3",
+	"ATU MAC bytes 4 & 5",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",			/* 20 */
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"IEEE FPri to QPrio mapping",
+	"IP to QPri & FPrio mapping",
+	"Monitor control",
+	"Free queue size",
+	"Global control 2",
+	"Stats operation",
+	"Stats counter bytes 3 & 2", 	/* 30 */
+	"Stats counter bytes 1 & 0",
+};
+
+static const char *mv88e6390_global1_reg_names[32] = {
+	"Global status", 		/* 0 */
+	"ATU FID",
+	"VTU FID",
+	"VTU SID",
+	"Global control",
+	"VTU operations",
+	"VTU VID",
+	"VTU/STU Data 0-7",
+	"VTU/STU Data 8-10",
+	"Reserved",
+	"ATU control",			/* 10 */
+	"ATU operations",
+	"ATU data",
+	"ATU MAC bytes 0 & 1",
+	"ATU MAC bytes 2 & 3",
+	"ATU MAC bytes 4 & 5",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",			/* 20 */
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Monitor & management Control",
+	"Total free counter",
+	"Global control 2",
+	"Stats operation",
+	"Stats counter bytes 3 & 2", 	/* 30 */
+	"Stats counter bytes 1 & 0",
+};
+
+static void global1_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
+{
+	printf("%02x ", reg);
+
+	switch (ctx->chip) {
+	case MV88E6190:
+	case MV88E6191:
+	case MV88E6290:
+	case MV88E6390:
+		printf("%-32s ", mv88e6390_global1_reg_names[reg]);
+		break;
+	case MV88E6171:
+	case MV88E6175:
+	case MV88E6350:
+	case MV88E6351:
+	case MV88E6172:
+	case MV88E6176:
+	case MV88E6240:
+	case MV88E6352:
+	case MV88E6320:
+	case MV88E6321:
+	case MV88E6341:
+	case MV88E6141:
+		printf("%-32s ", mv88e6352_global1_reg_names[reg]);
+		break;
+	case MV88E6131:
+	case MV88E6185:
+	case MV88E6165:
+	case MV88E6123:
+	case MV88E6161:
+		printf("%-32s ", mv88e6185_global1_reg_names[reg]);
+		break;
+	default:
+		printf("Unknown mv88e6xxx chip %x\n", ctx->chip);
+	}
+
+	return;
+}
+
 static void cmd_global1(struct mv88e6xxx_ctx *ctx)
 {
 	uint16_t *g2;
@@ -1483,8 +1662,10 @@ static void cmd_global1(struct mv88e6xxx_ctx *ctx)
 	}
 
 	g2 = (uint16_t *)ctx->snapshot_data;
-	for (i = 0; i < 32; i++)
-		printf("%2d %04x\n", i, g2[i]);
+	for (i = 0; i < 32; i++) {
+		global1_print_reg_name(ctx, i);
+		printf("%04x\n", g2[i]);
+	}
 }
 
 static void cmd_global2(struct mv88e6xxx_ctx *ctx)
