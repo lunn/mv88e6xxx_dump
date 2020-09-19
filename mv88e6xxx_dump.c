@@ -1668,6 +1668,150 @@ static void cmd_global1(struct mv88e6xxx_ctx *ctx)
 	}
 }
 
+static const char *mv88e6185_global2_reg_names[32] = {
+	"Reserved", 			/* 0 */
+	"Reserved",
+	"Reserved",
+	"Management enables",
+	"Flow control delays",
+	"Managment",
+	"Device mapping",
+	"Trunk mask",
+	"Trunk Members",
+	"Reserved",
+	"Ingress rate command",		/* 10 */
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",			/* 20 */
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",			/* 30 */
+	"Reserved",
+};
+
+static const char *mv88e6352_global2_reg_names[32] = {
+	"Interrupt source", 		/* 0 */
+	"Interrupt mask",
+	"Management enables 2x",
+	"Management enables 0x",
+	"Flow control delays",
+	"Managment",
+	"Device mapping",
+	"Trunk mask",
+	"Trunk mapping",
+	"Ingress rate command",
+	"Ingress rate data",		/* 10 */
+	"Cross chip port VLAN addr",
+	"Cross chip port VLAN data",
+	"Switch MAC/WoL/WoF",
+	"ATU Stats",
+	"Priority override table",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"EEPROM command",		/* 20 */
+	"EEPROM addr",
+	"AVB command",
+	"AVB data",
+	"SMI PHY command",
+	"SMI PHY data",
+	"Scratch & Misc",
+	"Watchdog control",
+	"QoS Weights",
+	"Misc",
+	"Reserved",			/* 30 */
+	"Reserved",
+};
+
+static const char *mv88e6390_global2_reg_names[32] = {
+	"Interrupt source", 		/* 0 */
+	"Interrupt mask",
+	"Reserved",
+	"Reserved",
+	"Flow control delays",
+	"Managment",
+	"Device mapping",
+	"LAG mask",
+	"LAG mapping",
+	"Ingress rate command",
+	"Ingress rate data",		/* 10 */
+	"Cross chip port VLAN addr",
+	"Cross chip port VLAN data",
+	"Switch MAC/WoL/WoF",
+	"ATU Stats",
+	"Priority override table",
+	"Reserved",
+	"Reserved",
+	"Energy management",
+	"IMP comm/debug",
+	"EEPROM command",		/* 20 */
+	"EEPROM addr",
+	"AVB/TSN command",
+	"AVB/TSN data",
+	"SMI PHY command",
+	"SMI PHY data",
+	"Scratch & Misc",
+	"Watchdog control",
+	"QoS Weights",
+	"Misc",
+	"Reserved", 	/* 30 */
+	"Cut through control",
+};
+
+static void global2_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
+{
+	printf("%02x ", reg);
+
+	switch (ctx->chip) {
+	case MV88E6190:
+	case MV88E6191:
+	case MV88E6290:
+	case MV88E6390:
+		printf("%-32s ", mv88e6390_global2_reg_names[reg]);
+		break;
+	case MV88E6171:
+	case MV88E6175:
+	case MV88E6350:
+	case MV88E6351:
+	case MV88E6172:
+	case MV88E6176:
+	case MV88E6240:
+	case MV88E6352:
+	case MV88E6320:
+	case MV88E6321:
+	case MV88E6341:
+	case MV88E6141:
+		printf("%-32s ", mv88e6352_global1_reg_names[reg]);
+		break;
+	case MV88E6131:
+	case MV88E6185:
+	case MV88E6165:
+	case MV88E6123:
+	case MV88E6161:
+		printf("%-32s ", mv88e6185_global2_reg_names[reg]);
+		break;
+	default:
+		printf("Unknown mv88e6xxx chip %x\n", ctx->chip);
+	}
+
+	return;
+}
+
 static void cmd_global2(struct mv88e6xxx_ctx *ctx)
 {
 	uint16_t *g2;
@@ -1690,8 +1834,10 @@ static void cmd_global2(struct mv88e6xxx_ctx *ctx)
 	}
 
 	g2 = (uint16_t *)ctx->snapshot_data;
-	for (i = 0; i < 32; i++)
-		printf("%2d %04x\n", i, g2[i]);
+	for (i = 0; i < 32; i++) {
+		global2_print_reg_name(ctx, i);
+		printf("%04x\n", g2[i]);
+	}
 }
 
 static int get_info_cb(const struct nlmsghdr *nlh, void *data)
