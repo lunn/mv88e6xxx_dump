@@ -54,6 +54,7 @@ struct mv88e6xxx_ctx
 	bool repeat;
 	uint8_t snapshot_data[MAX_SNAPSHOT_DATA];
 	size_t data_len;
+	bool port_enabled[MAX_PORTS];
 	uint16_t port_regs[MAX_PORTS][32];
 };
 
@@ -305,8 +306,9 @@ static void first_device(struct mv88e6xxx_ctx *ctx)
 	}
 }
 
-static void delete_snapshot_id(struct mv88e6xxx_ctx *ctx,
-			       const char *region_name, uint32_t id)
+static void delete_snapshot_port_id(struct mv88e6xxx_ctx *ctx,
+			       uint32_t port, const char *region_name,
+			       uint32_t id)
 {
 	struct nlmsghdr *nlh;
 
@@ -314,6 +316,8 @@ static void delete_snapshot_id(struct mv88e6xxx_ctx *ctx,
 			       NLM_F_REQUEST | NLM_F_ACK);
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_BUS_NAME, ctx->bus_name);
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_DEV_NAME, ctx->dev_name);
+	if (port != ~0)
+		mnl_attr_put_u32(nlh, DEVLINK_ATTR_PORT_INDEX, port);
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_REGION_NAME, region_name);
 	mnl_attr_put_u32(nlh, DEVLINK_ATTR_REGION_SNAPSHOT_ID, id);
 
@@ -328,9 +332,13 @@ static void delete_snapshot(struct mv88e6xxx_ctx *ctx, struct nlattr **tb)
 	struct nlattr *nla_sanpshot;
 	const char * region_name;
 	uint32_t snapshot_id;
+	uint32_t port = ~0;
 	int err;
 
 	region_name = mnl_attr_get_str(tb[DEVLINK_ATTR_REGION_NAME]);
+
+	if (tb[DEVLINK_ATTR_PORT_INDEX])
+		port = mnl_attr_get_u32(tb[DEVLINK_ATTR_PORT_INDEX]);
 
 	mnl_attr_for_each_nested(nla_sanpshot,
 				 tb[DEVLINK_ATTR_REGION_SNAPSHOTS]) {
@@ -344,7 +352,7 @@ static void delete_snapshot(struct mv88e6xxx_ctx *ctx, struct nlattr **tb)
 		snapshot_id = mnl_attr_get_u32(
 			tb_snapshot[DEVLINK_ATTR_REGION_SNAPSHOT_ID]);
 
-		delete_snapshot_id(ctx, region_name, snapshot_id);
+		delete_snapshot_port_id(ctx, port, region_name, snapshot_id);
 	}
 }
 
@@ -362,8 +370,9 @@ static int delete_snapshots_cb(const struct nlmsghdr *nlh, void *data)
 		return MNL_CB_ERROR;
 
 	region_name = mnl_attr_get_str(tb[DEVLINK_ATTR_REGION_NAME]);
-	if (!strncmp(region_name, "port", 4)) {
-		port = atoi(region_name + 4);
+	if (!strcmp(region_name, "port") && tb[DEVLINK_ATTR_PORT_INDEX]) {
+		port = mnl_attr_get_u32(tb[DEVLINK_ATTR_PORT_INDEX]);
+		ctx->port_enabled[port] = true;
 		if (port > ctx->ports)
 			ctx->ports = port;
 	}
@@ -392,8 +401,9 @@ static void delete_snapshots(struct mv88e6xxx_ctx *ctx)
 	} while (ctx->repeat);
 }
 
-static int new_snapshot_id(struct mv88e6xxx_ctx *ctx, const char *region_name,
-			   uint32_t id)
+static int new_snapshot_port_id(struct mv88e6xxx_ctx *ctx,
+				uint32_t port, const char *region_name,
+				uint32_t id)
 {
 	struct nlmsghdr *nlh;
 	int err;
@@ -404,6 +414,8 @@ static int new_snapshot_id(struct mv88e6xxx_ctx *ctx, const char *region_name,
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_BUS_NAME, ctx->bus_name);
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_DEV_NAME, ctx->dev_name);
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_REGION_NAME, region_name);
+	if (port != ~0)
+		mnl_attr_put_u32(nlh, DEVLINK_ATTR_PORT_INDEX, port);
 	mnl_attr_put_u32(nlh, DEVLINK_ATTR_REGION_SNAPSHOT_ID, id);
 
 	err = _mnlg_socket_sndrcv(ctx->nlg, nlh, NULL, NULL);
@@ -411,6 +423,12 @@ static int new_snapshot_id(struct mv88e6xxx_ctx *ctx, const char *region_name,
 		printf("Unable to snapshot %s\n", region_name);
 
 	return err;
+}
+
+static int new_snapshot_id(struct mv88e6xxx_ctx *ctx, const char *region_name,
+			   uint32_t id)
+{
+	return new_snapshot_port_id(ctx, ~0, region_name, id);
 }
 
 static int new_snapshot(struct mv88e6xxx_ctx *ctx, const char *region_name)
@@ -470,8 +488,9 @@ static int dump_snapshot_cb(const struct nlmsghdr *nlh, void *data)
 	return MNL_CB_OK;
 }
 
-static int dump_snapshot_id(struct mv88e6xxx_ctx *ctx, const char *region_name,
-			    uint32_t id)
+static int dump_snapshot_port_id(struct mv88e6xxx_ctx *ctx,
+				 uint32_t port, const char *region_name,
+				 uint32_t id)
 {
 	struct nlmsghdr *nlh;
 	int err;
@@ -481,6 +500,8 @@ static int dump_snapshot_id(struct mv88e6xxx_ctx *ctx, const char *region_name,
 
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_BUS_NAME, ctx->bus_name);
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_DEV_NAME, ctx->dev_name);
+	if (port != ~0)
+		mnl_attr_put_u32(nlh, DEVLINK_ATTR_PORT_INDEX, port);
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_REGION_NAME, region_name);
 	mnl_attr_put_u32(nlh, DEVLINK_ATTR_REGION_SNAPSHOT_ID, id);
 
@@ -489,6 +510,12 @@ static int dump_snapshot_id(struct mv88e6xxx_ctx *ctx, const char *region_name,
 		printf("Unable to dump snapshot %s\n", region_name);
 
 	return err;
+}
+
+static int dump_snapshot_id(struct mv88e6xxx_ctx *ctx,
+				 const char *region_name, uint32_t id)
+{
+	return dump_snapshot_port_id(ctx, ~0, region_name, id);
 }
 
 static int dump_snapshot(struct mv88e6xxx_ctx *ctx, const char *region_name)
@@ -502,15 +529,14 @@ static int port_dump(struct mv88e6xxx_ctx *ctx, int port)
 	int err, reg;
 	uint16_t *p;
 
-	sprintf(region_name, "port%d", port);
+	sprintf(region_name, "port", port);
 
-	err = new_snapshot_id(ctx, region_name, SNAPSHOT_ID + port);
+	err = new_snapshot_port_id(ctx, port, "port", SNAPSHOT_ID + port);
 	if (err) {
-		printf("%s: port %d err %d\n", __func__, port, err);
 		return err;
 	}
 
-	err = dump_snapshot_id(ctx, region_name, SNAPSHOT_ID + port);
+	err = dump_snapshot_port_id(ctx, port, "port", SNAPSHOT_ID + port);
 	if (err)
 		return err;
 
@@ -1229,8 +1255,12 @@ static void ports_print(struct mv88e6xxx_ctx *ctx)
 	for (reg = 0; reg < 32; reg++) {
 		ports_print_reg_name(ctx, reg);
 
-		for (port = 0; port <= ctx->ports; port++)
-			printf("%04x ", ctx->port_regs[port][reg]);
+		for (port = 0; port <= ctx->ports; port++) {
+			if (ctx->port_enabled[port])
+				printf("%04x ", ctx->port_regs[port][reg]);
+			else
+				printf("     ");
+		}
 		putchar('\n');
 	}
 }
@@ -1241,9 +1271,8 @@ static void cmd_ports(struct mv88e6xxx_ctx *ctx)
 	int err;
 
 	for (port = 0; port <= ctx->ports; port++) {
-		err = port_dump(ctx, port);
-		if (err)
-			break;
+		if (ctx->port_enabled[port])
+			port_dump(ctx, port);
 	}
 	ports_print(ctx);
 }
@@ -1692,7 +1721,7 @@ int main(int argc, char * argv[])
 
 	if (do_port) {
 		if (port > ctx.ports) {
-			printf("Port %d invalid\n");
+			printf("Port %d invalid\n",  port);
 			exit(EXIT_FAILURE);
 		}
 		cmd_port(&ctx, port);
