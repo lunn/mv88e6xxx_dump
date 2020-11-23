@@ -13,7 +13,7 @@
 
 /* All single snapshots used by this program have this ID. */
 #define SNAPSHOT_ID 42
-#define MAX_SNAPSHOT_DATA 64 * 1024
+#define MAX_SNAPSHOT_DATA 128 * 1024
 
 #define MV88E6085	6085
 #define MV88E6095	6095
@@ -66,6 +66,15 @@ struct mv88e6xxx_devlink_atu_entry {
 	uint16_t atu_01;
 	uint16_t atu_23;
 	uint16_t atu_45;
+};
+
+struct mv88e6xxx_devlink_vtu_entry {
+	uint16_t fid;
+	uint16_t sid;
+	uint16_t op;
+	uint16_t vid;
+	uint16_t data[3];
+	uint16_t resvd;
 };
 
 void usage(const char *progname)
@@ -1395,6 +1404,55 @@ static void atu_mv88e6xxx(struct mv88e6xxx_ctx *ctx, uint16_t portvec_mask,
 	}
 }
 
+char tagging[] = {'V', 'U', 'T','X'};
+
+static void vtu_mv88e6xxx(struct mv88e6xxx_ctx *ctx)
+{
+	struct mv88e6xxx_devlink_vtu_entry *table;
+	int entries, i,p;
+	uint16_t vid;
+	uint8_t state, page, fprio, qprio;
+	uint8_t port_tag[16];
+
+	table = (struct mv88e6xxx_devlink_vtu_entry *)ctx->snapshot_data;
+	entries = ctx->data_len / sizeof(struct mv88e6xxx_devlink_vtu_entry);
+	printf("\tV - a member, egress not modified\n");
+	printf("\tU - a member, egress untagged\n");
+	printf("\tT - a member, egress tagged\n");
+	printf("\tX - not a member, Ingress frames with VID discarded\n");
+
+	printf("P  VID ");
+	for (p = 0; p <= ctx->ports; p++) {
+		printf("%1x", p);
+	}
+
+	printf(" QPrio FPrio\n");
+	for (i = 0; i < entries; i++) {
+		state = !!(table[i].vid & 0x1000);
+		if (!state)
+			continue;
+		vid = table[i].vid & 0xfff;
+		page= !!(table[i].vid & 0x2000);
+		fprio = (table[i].data[1] >> 8)  & 0xf;
+		qprio = (table[i].data[1] >> 12) & 0xf;
+
+		printf("%d ", page);
+		printf("%4d ", vid);
+
+		uint16_t *pmask = table[i].data;
+		for (p = 0; p <= ctx->ports; p++) {
+			pmask += p/8;
+			port_tag[p] = ( (*pmask) >> ((p % 8) * 2)) & 0x3;
+			printf ("%c", tagging[port_tag[p]]);
+		}
+
+		printf(" %5c", (qprio & 0x8) ? '0' + (qprio & 0x7) : '-');
+		printf(" %5c", (fprio & 0x8) ? '0' + (fprio & 0x7) : '-');
+
+		printf("\n");
+	}
+}
+
 static void cmd_atu(struct mv88e6xxx_ctx *ctx)
 {
 	int err;
@@ -1443,6 +1501,7 @@ static void cmd_atu(struct mv88e6xxx_ctx *ctx)
 	default:
 		printf("Unknown mv88e6xxx chip %x\n", ctx->chip);
 	}
+
 	return;
 }
 
@@ -1456,9 +1515,39 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 	if (err)
 		return;
 
-	err = dump_snapshot(ctx, "vtu1");
+	err = dump_snapshot(ctx, "vtu");
 	if (err)
 		return;
+
+	switch (ctx->chip) {
+	case MV88E6190:
+	case MV88E6191:
+	case MV88E6290:
+	case MV88E6390:
+		return vtu_mv88e6xxx(ctx);
+	case MV88E6171:
+	case MV88E6175:
+	case MV88E6350:
+	case MV88E6351:
+	case MV88E6172:
+	case MV88E6176:
+	case MV88E6240:
+	case MV88E6352:
+	case MV88E6141:
+	case MV88E6341:
+	case MV88E6320:
+	case MV88E6321:
+	case MV88E6220:
+	case MV88E6250:
+	case MV88E6131:
+	case MV88E6185:
+	case MV88E6123:
+	case MV88E6161:
+	case MV88E6165:
+	default:
+		printf("Unknown mv88e6xxx chip %x\n", ctx->chip);
+	}
+	return;
 }
 
 static const char *mv88e6321_global1_reg_names[32] = {
