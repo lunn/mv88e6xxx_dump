@@ -1406,13 +1406,14 @@ static void atu_mv88e6xxx(struct mv88e6xxx_ctx *ctx, uint16_t portvec_mask,
 
 char tagging[] = {'V', 'U', 'T','X'};
 
-static void vtu_mv88e6xxx(struct mv88e6xxx_ctx *ctx)
+static void vtu_mv88e6xxx(struct mv88e6xxx_ctx *ctx, uint16_t fid_mask)
 {
 	struct mv88e6xxx_devlink_vtu_entry *table;
-	int entries, i,p;
+	bool state, page, vidpolicy;
+	uint8_t fprio, qprio, fid;
+	uint8_t port_tag[16], sid;
+	int entries, i, p;
 	uint16_t vid;
-	uint8_t state, page, fprio, qprio;
-	uint8_t port_tag[16];
 
 	table = (struct mv88e6xxx_devlink_vtu_entry *)ctx->snapshot_data;
 	entries = ctx->data_len / sizeof(struct mv88e6xxx_devlink_vtu_entry);
@@ -1426,15 +1427,18 @@ static void vtu_mv88e6xxx(struct mv88e6xxx_ctx *ctx)
 		printf("%1x", p);
 	}
 
-	printf(" QPrio FPrio\n");
+	printf("  FID  SID QPrio FPrio VidPolicy\n");
 	for (i = 0; i < entries; i++) {
-		state = !!(table[i].vid & 0x1000);
+		state = table[i].vid & 0x1000;
 		if (!state)
 			continue;
 		vid = table[i].vid & 0xfff;
-		page= !!(table[i].vid & 0x2000);
+		page = table[i].vid & 0x2000;
 		fprio = (table[i].data[1] >> 8)  & 0xf;
 		qprio = (table[i].data[1] >> 12) & 0xf;
+		fid = table[i].fid & fid_mask;
+		vidpolicy = table[i].fid & (1 << 12);
+		sid = table[i].sid & 0x1f;
 
 		printf("%d ", page);
 		printf("%4d ", vid);
@@ -1446,8 +1450,10 @@ static void vtu_mv88e6xxx(struct mv88e6xxx_ctx *ctx)
 			printf ("%c", tagging[port_tag[p]]);
 		}
 
+		printf(" %4d %4d", fid, sid);
 		printf(" %5c", (qprio & 0x8) ? '0' + (qprio & 0x7) : '-');
 		printf(" %5c", (fprio & 0x8) ? '0' + (fprio & 0x7) : '-');
+		printf(" %5d  ", vidpolicy);
 
 		printf("\n");
 	}
@@ -1524,7 +1530,7 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 	case MV88E6191:
 	case MV88E6290:
 	case MV88E6390:
-		return vtu_mv88e6xxx(ctx);
+		return vtu_mv88e6xxx(ctx, 0x7ff);
 	case MV88E6171:
 	case MV88E6175:
 	case MV88E6350:
@@ -1533,10 +1539,13 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 	case MV88E6176:
 	case MV88E6240:
 	case MV88E6352:
+		return vtu_mv88e6xxx(ctx, 0x7ff);
 	case MV88E6141:
 	case MV88E6341:
+		return vtu_mv88e6xxx(ctx, 0xff);
 	case MV88E6320:
 	case MV88E6321:
+		return vtu_mv88e6xxx(ctx, 0x7ff);
 	case MV88E6220:
 	case MV88E6250:
 	case MV88E6131:
