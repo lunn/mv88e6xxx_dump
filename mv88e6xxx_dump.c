@@ -1548,6 +1548,7 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 		return vtu_mv88e6xxx(ctx, 0x7ff);
 	case MV88E6220:
 	case MV88E6250:
+		return vtu_mv88e6xxx(ctx, 0x3f);
 	case MV88E6131:
 	case MV88E6185:
 	case MV88E6123:
