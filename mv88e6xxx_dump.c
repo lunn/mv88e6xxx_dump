@@ -1700,6 +1700,41 @@ static const char *mv88e6390_global1_reg_names[32] = {
 	"Stats counter bytes 1 & 0",
 };
 
+static const char *mv88e6250_global1_reg_names[32] = {
+	"Global status", 		/* 0 */
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Global control",
+	"VTU operations",
+	"VTU VID",
+	"VTU Data 0-3",
+	"VTU Data 4-6",
+	"Reserved",
+	"ATU control",			/* 10 */
+	"ATU operations",
+	"ATU data",
+	"ATU MAC bytes 0 & 1",
+	"ATU MAC bytes 2 & 3",
+	"ATU MAC bytes 4 & 5",
+	"IP-PRI mapping 0",
+	"IP-PRI mapping 1",
+	"IP-PRI mapping 2",
+	"IP-PRI mapping 3",
+	"IP-PRI mapping 4",		/* 20 */
+	"IP-PRI mapping 5",
+	"IP-PRI mapping 6",
+	"IP-PRI mapping 7",
+	"IEEE FPri to QPrio mapping",
+	"IP to QPri & FPrio mapping",
+	"Monitor control",
+	"Free queue size",
+	"Global control 2",
+	"Stats operation",
+	"Stats counter bytes 3 & 2", 	/* 30 */
+	"Stats counter bytes 1 & 0",
+};
+
 static void global1_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
 {
 	printf("%02x ", reg);
@@ -1731,6 +1766,10 @@ static void global1_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
 	case MV88E6123:
 	case MV88E6161:
 		printf("%-32s ", mv88e6185_global1_reg_names[reg]);
+		break;
+	case MV88E6220:
+	case MV88E6250:
+		printf("%-32s ", mv88e6250_global1_reg_names[reg]);
 		break;
 	default:
 		printf("Unknown mv88e6xxx chip %d\n", ctx->chip);
