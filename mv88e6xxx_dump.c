@@ -1505,7 +1505,7 @@ static void cmd_atu(struct mv88e6xxx_ctx *ctx)
 	case MV88E6165:
 		return atu_mv88e6xxx(ctx, 0x03f, 6);
 	default:
-		printf("Unknown mv88e6xxx chip %x\n", ctx->chip);
+		printf("Unknown mv88e6xxx chip %d\n", ctx->chip);
 	}
 
 	return;
@@ -1554,7 +1554,7 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 	case MV88E6161:
 	case MV88E6165:
 	default:
-		printf("Unknown mv88e6xxx chip %x\n", ctx->chip);
+		printf("Unknown mv88e6xxx chip %d\n", ctx->chip);
 	}
 	return;
 }
@@ -1732,7 +1732,7 @@ static void global1_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
 		printf("%-32s ", mv88e6185_global1_reg_names[reg]);
 		break;
 	default:
-		printf("Unknown mv88e6xxx chip %x\n", ctx->chip);
+		printf("Unknown mv88e6xxx chip %d\n", ctx->chip);
 	}
 
 	return;
@@ -1904,7 +1904,7 @@ static void global2_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
 		printf("%-32s ", mv88e6185_global2_reg_names[reg]);
 		break;
 	default:
-		printf("Unknown mv88e6xxx chip %x\n", ctx->chip);
+		printf("Unknown mv88e6xxx chip %d\n", ctx->chip);
 	}
 
 	return;
