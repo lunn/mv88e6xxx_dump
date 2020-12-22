@@ -1374,7 +1374,7 @@ static void atu_mv88e6xxx(struct mv88e6xxx_ctx *ctx, uint16_t portvec_mask,
 	for (i = 0; i < entries; i++) {
 		state = table[i].atu_data & 0xf;
 		trunk = !!(table[i].atu_data & 0x8000);
-		portvec = (table[i].atu_data & portvec_mask) >> 4;
+		portvec = (table[i].atu_data >> 4) & portvec_mask;
 
 		if (!state)
 			continue;
