@@ -1911,6 +1911,41 @@ static const char *mv88e6390_global2_reg_names[32] = {
 	"Cut through control",
 };
 
+static const char *mv88e6250_global2_reg_names[32] = {
+	"Interrupt source", 		/* 0 */
+	"Interrupt mask",
+	"Management enables 2x",
+	"Management enables 0x",
+	"Reserved",
+	"Managment",
+	"Reserved",
+	"Trunk mask",
+	"Reserved",
+	"Ingress rate command",
+	"Ingress rate data",		/* 10 */
+	"Reserved",
+	"Reserved",
+	"Switch MAC/WoL/WoF",
+	"ATU Stats",
+	"Priority override table",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"EEPROM command",		/* 20 */
+	"EEPROM addr",
+	"AVB command",
+	"AVB data",
+	"SMI PHY command",
+	"SMI PHY data",
+	"Scratch & Misc",
+	"Watchdog control",
+	"Reserved",
+	"Reserved",
+	"Reserved",			/* 30 */
+	"Reserved",
+};
+
 static void global2_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
 {
 	printf("%02x ", reg);
@@ -1942,6 +1977,10 @@ static void global2_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
 	case MV88E6123:
 	case MV88E6161:
 		printf("%-32s ", mv88e6185_global2_reg_names[reg]);
+		break;
+	case MV88E6220:
+	case MV88E6250:
+		printf("%-32s ", mv88e6250_global2_reg_names[reg]);
 		break;
 	default:
 		printf("Unknown mv88e6xxx chip %d\n", ctx->chip);
