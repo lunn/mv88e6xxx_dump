@@ -56,6 +56,7 @@ struct mv88e6xxx_ctx
 	size_t data_len;
 	bool port_enabled[MAX_PORTS];
 	uint16_t port_regs[MAX_PORTS][32];
+	uint8_t vtu_port_size;
 };
 
 struct mv88e6xxx_devlink_atu_entry {
@@ -1445,8 +1446,8 @@ static void vtu_mv88e6xxx(struct mv88e6xxx_ctx *ctx, uint16_t fid_mask)
 
 		uint16_t *pmask = table[i].data;
 		for (p = 0; p <= ctx->ports; p++) {
-			pmask += p/8;
-			port_tag[p] = ( (*pmask) >> ((p % 8) * 2)) & 0x3;
+			pmask += p/ctx->vtu_port_size;
+			port_tag[p] = ( (*pmask) >> ((p % ctx->vtu_port_size) * (16/ctx->vtu_port_size))) & 0x3;
 			printf ("%c", tagging[port_tag[p]]);
 		}
 
@@ -1524,6 +1525,8 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 	err = dump_snapshot(ctx, "vtu");
 	if (err)
 		return;
+
+	ctx->vtu_port_size = 8; /* default */
 
 	switch (ctx->chip) {
 	case MV88E6190:
