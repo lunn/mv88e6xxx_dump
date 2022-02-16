@@ -15,6 +15,7 @@
 #define SNAPSHOT_ID 42
 #define MAX_SNAPSHOT_DATA 128 * 1024
 
+#define MV88E6071	6071
 #define MV88E6085	6085
 #define MV88E6095	6095
 #define MV88E6097	6097
@@ -1495,6 +1496,7 @@ static void cmd_atu(struct mv88e6xxx_ctx *ctx)
 	case MV88E6320:
 	case MV88E6321:
 		return atu_mv88e6xxx(ctx, 0x07f, 7);
+	case MV88E6071:
 	case MV88E6220:
 	case MV88E6250:
 		return atu_mv88e6xxx(ctx, 0x03f, 7);
@@ -1549,8 +1551,10 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 	case MV88E6320:
 	case MV88E6321:
 		return vtu_mv88e6xxx(ctx, 0x7ff);
+	case MV88E6071:
 	case MV88E6220:
 	case MV88E6250:
+		ctx->vtu_port_size = 4;
 		return vtu_mv88e6xxx(ctx, 0x3f);
 	case MV88E6131:
 	case MV88E6185:
@@ -1770,6 +1774,7 @@ static void global1_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
 	case MV88E6161:
 		printf("%-32s ", mv88e6185_global1_reg_names[reg]);
 		break;
+	case MV88E6071:
 	case MV88E6220:
 	case MV88E6250:
 		printf("%-32s ", mv88e6250_global1_reg_names[reg]);
@@ -1981,6 +1986,7 @@ static void global2_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
 	case MV88E6161:
 		printf("%-32s ", mv88e6185_global2_reg_names[reg]);
 		break;
+	case MV88E6071:
 	case MV88E6220:
 	case MV88E6250:
 		printf("%-32s ", mv88e6250_global2_reg_names[reg]);
