@@ -80,14 +80,14 @@ struct mv88e6xxx_devlink_vtu_entry {
 void usage(const char *progname)
 {
 	printf("%s [OPTIONs]\n", progname);
-	printf("  --debug/-d\tExtra debug output\n");
+	printf("  --debug/-D\tExtra debug output\n");
 	printf("  --list/-l\tList the mv88e6xxx devices\n");
 	printf("  --device/-d\tDump this device\n");
 	printf("  --atu\t\tDump the ATU\n");
 	printf("  --vtu\t\tDump the VTU\n");
 	printf("  --ports\tDump all ports in a table\n");
 	printf("  --global1\tDump global1 registers\n");
-	printf("  --global2\tDump globAL2 registers\n");
+	printf("  --global2\tDump global2 registers\n");
 
 	exit(EXIT_FAILURE);
 }
