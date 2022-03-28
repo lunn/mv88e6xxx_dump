@@ -15,6 +15,7 @@
 #define SNAPSHOT_ID 42
 #define MAX_SNAPSHOT_DATA 128 * 1024
 
+#define MV88E6071	6071
 #define MV88E6085	6085
 #define MV88E6095	6095
 #define MV88E6097	6097
@@ -56,6 +57,7 @@ struct mv88e6xxx_ctx
 	size_t data_len;
 	bool port_enabled[MAX_PORTS];
 	uint16_t port_regs[MAX_PORTS][32];
+	uint8_t vtu_port_size;
 };
 
 struct mv88e6xxx_devlink_atu_entry {
@@ -80,14 +82,14 @@ struct mv88e6xxx_devlink_vtu_entry {
 void usage(const char *progname)
 {
 	printf("%s [OPTIONs]\n", progname);
-	printf("  --debug/-d\tExtra debug output\n");
+	printf("  --debug/-D\tExtra debug output\n");
 	printf("  --list/-l\tList the mv88e6xxx devices\n");
 	printf("  --device/-d\tDump this device\n");
 	printf("  --atu\t\tDump the ATU\n");
 	printf("  --vtu\t\tDump the VTU\n");
 	printf("  --ports\tDump all ports in a table\n");
 	printf("  --global1\tDump global1 registers\n");
-	printf("  --global2\tDump globAL2 registers\n");
+	printf("  --global2\tDump global2 registers\n");
 
 	exit(EXIT_FAILURE);
 }
@@ -1445,8 +1447,8 @@ static void vtu_mv88e6xxx(struct mv88e6xxx_ctx *ctx, uint16_t fid_mask)
 
 		uint16_t *pmask = table[i].data;
 		for (p = 0; p <= ctx->ports; p++) {
-			pmask += p/8;
-			port_tag[p] = ( (*pmask) >> ((p % 8) * 2)) & 0x3;
+			pmask += p/ctx->vtu_port_size;
+			port_tag[p] = ( (*pmask) >> ((p % ctx->vtu_port_size) * (16/ctx->vtu_port_size))) & 0x3;
 			printf ("%c", tagging[port_tag[p]]);
 		}
 
@@ -1494,6 +1496,7 @@ static void cmd_atu(struct mv88e6xxx_ctx *ctx)
 	case MV88E6320:
 	case MV88E6321:
 		return atu_mv88e6xxx(ctx, 0x07f, 7);
+	case MV88E6071:
 	case MV88E6220:
 	case MV88E6250:
 		return atu_mv88e6xxx(ctx, 0x03f, 7);
@@ -1525,6 +1528,8 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 	if (err)
 		return;
 
+	ctx->vtu_port_size = 8; /* default */
+
 	switch (ctx->chip) {
 	case MV88E6190:
 	case MV88E6191:
@@ -1546,8 +1551,10 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 	case MV88E6320:
 	case MV88E6321:
 		return vtu_mv88e6xxx(ctx, 0x7ff);
+	case MV88E6071:
 	case MV88E6220:
 	case MV88E6250:
+		ctx->vtu_port_size = 4;
 		return vtu_mv88e6xxx(ctx, 0x3f);
 	case MV88E6131:
 	case MV88E6185:
@@ -1767,6 +1774,7 @@ static void global1_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
 	case MV88E6161:
 		printf("%-32s ", mv88e6185_global1_reg_names[reg]);
 		break;
+	case MV88E6071:
 	case MV88E6220:
 	case MV88E6250:
 		printf("%-32s ", mv88e6250_global1_reg_names[reg]);
@@ -1978,6 +1986,7 @@ static void global2_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
 	case MV88E6161:
 		printf("%-32s ", mv88e6185_global2_reg_names[reg]);
 		break;
+	case MV88E6071:
 	case MV88E6220:
 	case MV88E6250:
 		printf("%-32s ", mv88e6250_global2_reg_names[reg]);
