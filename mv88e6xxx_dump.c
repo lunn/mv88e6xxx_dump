@@ -1528,13 +1528,16 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 	if (err)
 		return;
 
-	ctx->vtu_port_size = 8; /* default */
+	/* Only MV88E6XXX_FAMILY_639{0,3} use 8, set default to 4 */
+	ctx->vtu_port_size = 4;
 
 	switch (ctx->chip) {
+	/* MV88E6XXX_FAMILY_6390 */
 	case MV88E6190:
 	case MV88E6191:
 	case MV88E6290:
 	case MV88E6390:
+		ctx->vtu_port_size = 8;
 		return vtu_mv88e6xxx(ctx, 0x7ff);
 	case MV88E6171:
 	case MV88E6175:
@@ -1554,7 +1557,6 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 	case MV88E6071:
 	case MV88E6220:
 	case MV88E6250:
-		ctx->vtu_port_size = 4;
 		return vtu_mv88e6xxx(ctx, 0x3f);
 	case MV88E6131:
 	case MV88E6185:
