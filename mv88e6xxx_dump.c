@@ -1977,7 +1977,7 @@ static void global2_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
 	case MV88E6321:
 	case MV88E6341:
 	case MV88E6141:
-		printf("%-32s ", mv88e6352_global1_reg_names[reg]);
+		printf("%-32s ", mv88e6352_global2_reg_names[reg]);
 		break;
 	case MV88E6131:
 	case MV88E6185:
