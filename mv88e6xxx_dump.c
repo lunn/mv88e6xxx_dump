@@ -2043,7 +2043,8 @@ static int get_info_cb(const struct nlmsghdr *nlh, void *data)
 		return MNL_CB_ERROR;
 
 	driver_name = mnl_attr_get_str(tb[DEVLINK_ATTR_INFO_DRIVER_NAME]);
-	if (strcmp(driver_name, "mv88e6xxx")) {
+	if (strcmp(driver_name, "mv88e6xxx") &&
+	    strcmp(driver_name, "mv88e6085")) {
 		printf("%s/%s is not an mv88e6xxx\n", ctx->bus_name,
 			ctx->dev_name);
 		exit(EXIT_FAILURE);
