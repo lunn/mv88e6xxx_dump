@@ -88,6 +88,7 @@ void usage(const char *progname)
 	printf("  --atu\t\tDump the ATU\n");
 	printf("  --vtu\t\tDump the VTU\n");
 	printf("  --ports\tDump all ports in a table\n");
+	printf("  --port <port>\tDump this port registers\n");
 	printf("  --global1\tDump global1 registers\n");
 	printf("  --global2\tDump global2 registers\n");
 
