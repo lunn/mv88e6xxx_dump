@@ -91,6 +91,7 @@ void usage(const char *progname)
 	printf("  --port <port>\tDump this port registers\n");
 	printf("  --global1\tDump global1 registers\n");
 	printf("  --global2\tDump global2 registers\n");
+	printf("  --scratch\tDump scratch/misc registers\n");
 
 	exit(EXIT_FAILURE);
 }
@@ -533,6 +534,22 @@ static int dump_snapshot_id(struct mv88e6xxx_ctx *ctx,
 static int dump_snapshot(struct mv88e6xxx_ctx *ctx, const char *region_name)
 {
 	return dump_snapshot_id(ctx, region_name, SNAPSHOT_ID);
+}
+
+static void region_print_hex(uint8_t *data, int len)
+{
+	int i, hlen = (len < 16) ? len: 16;
+	printf("      ");
+	for (i = 0; i < hlen; i++) {
+		printf("%02x ", i);
+	}
+	for (i = 0; i < len; i++) {
+		if (!(i&0xf )) {
+			printf("\n%04x:", i);
+		}
+		printf(" %02x", data[i]);
+	}
+	printf("\n");
 }
 
 static int port_dump(struct mv88e6xxx_ctx *ctx, int port)
@@ -1166,6 +1183,433 @@ static const char *mv88e6390_port_reg_names[32] = {
 	"Cut through control",
 	"Debug counters",
 };
+
+static const char *mv88e6390_scratch_reg_names[] = {
+	"Scratch Byte 0",
+	"Scratch Byte 1",
+	"Misc Configuration",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"GPIO 0 Port Stall Vector 0",
+	"GPIO 0 Port Stall Vector 1",
+	"GPIO 1 Port Stall Vector 0",
+	"GPIO 1 Port Stall Vector 1",
+	"GPIO 2 Port Stall Vector 0",
+	"GPIO 2 Port Stall Vector 1",
+	"GPIO 3 Port Stall Vector 0",
+	"GPIO 3 Port Stall Vector 1",
+	"GPIO 4 Port Stall Vector 0",
+	"GPIO 4 Port Stall Vector 1",
+	"GPIO 5 Port Stall Vector 0",
+	"GPIO 5 Port Stall Vector 1",
+	"GPIO 6 Port Stall Vector 0",
+	"GPIO 6 Port Stall Vector 1",
+	"GPIO 7 Port Stall Vector 0",
+	"GPIO 7 Port Stall Vector 1",
+	"GPIO 8 Port Stall Vector 0",
+	"GPIO 8 Port Stall Vector 1",
+	"GPIO 9 Port Stall Vector 0",
+	"GPIO 9 Port Stall Vector 1",
+	"GPIO 10 Port Stall Vector 0",
+	"GPIO 10 Port Stall Vector 1",
+	"GPIO 11 Port Stall Vector 0",
+	"GPIO 11 Port Stall Vector 1",
+	"GPIO 12 Port Stall Vector 0",
+	"GPIO 12 Port Stall Vector 1",
+	"GPIO 13 Port Stall Vector 0",
+	"GPIO 13 Port Stall Vector 1",
+	"GPIO 14 Port Stall Vector 0",
+	"GPIO 14 Port Stall Vector 1",
+	"GPIO 15 Port Stall Vector 0",
+	"GPIO 15 Port Stall Vector 1",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"GPIO Configuration",
+	"GPIO Configuration",
+	"GPIO Direction",
+	"GPIO Direction",
+	"GPIO Data",
+	"GPIO Data",
+	"Reserved",
+	"Reserved",
+	"GPIO Pin Control 0",
+	"GPIO Pin Control 1",
+	"GPIO Pin Control 2",
+	"GPIO Pin Control 3",
+	"GPIO Pin Control 4",
+	"GPIO Pin Control 5",
+	"GPIO Pin Control 6",
+	"GPIO Pin Control 7",
+	"CONFIG Data0",
+	"CONFIG Data1",
+	"CONFIG Data2",
+	"CONFIG Data3",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+};
+
+static const char *mv88e6352_scratch_reg_names[] = {
+	"Scratch Byte 0",
+	"Scratch Byte 1",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Voltage Regulator Control",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"EEE Timer Rates",
+	"EEE Assertion Timer",
+	"EEE Wake Timer",
+	"EEE TxIdle Timer",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"GPIO 0 Port Stall Vector 0",
+	"GPIO 0 Port Stall Vector 1",
+	"GPIO 1 Port Stall Vector 0",
+	"GPIO 1 Port Stall Vector 1",
+	"GPIO 2 Port Stall Vector 0",
+	"GPIO 2 Port Stall Vector 1",
+	"GPIO 3 Port Stall Vector 0",
+	"GPIO 3 Port Stall Vector 1",
+	"GPIO 4 Port Stall Vector 0",
+	"GPIO 4 Port Stall Vector 1",
+	"GPIO 5 Port Stall Vector 0",
+	"GPIO 5 Port Stall Vector 1",
+	"GPIO 6 Port Stall Vector 0",
+	"GPIO 6 Port Stall Vector 1",
+	"GPIO 7 Port Stall Vector 0",
+	"GPIO 7 Port Stall Vector 1",
+	"GPIO 8 Port Stall Vector 0",
+	"GPIO 8 Port Stall Vector 1",
+	"GPIO 9 Port Stall Vector 0",
+	"GPIO 9 Port Stall Vector 1",
+	"GPIO 10 Port Stall Vector 0",
+	"GPIO 10 Port Stall Vector 1",
+	"GPIO 11 Port Stall Vector 0",
+	"GPIO 11 Port Stall Vector 1",
+	"GPIO 12 Port Stall Vector 0",
+	"GPIO 12 Port Stall Vector 1",
+	"GPIO 13 Port Stall Vector 0",
+	"GPIO 13 Port Stall Vector 1",
+	"GPIO 14 Port Stall Vector 0",
+	"GPIO 14 Port Stall Vector 1",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"GPIO Configuration",
+	"GPIO Configuration",
+	"GPIO Direction",
+	"GPIO Direction",
+	"GPIO Data",
+	"GPIO Data",
+	"Reserved",
+	"Reserved",
+	"GPIO Pin Control 0",
+	"GPIO Pin Control 1",
+	"GPIO Pin Control 2",
+	"GPIO Pin Control 3",
+	"GPIO Pin Control 4",
+	"GPIO Pin Control 5",
+	"GPIO Pin Control 6",
+	"GPIO Pin Control 7",
+	"CONFIG Data0",
+	"CONFIG Data1",
+	"CONFIG Data2",
+	"CONFIG Data3",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+};
+
+static const char *mv88e6320_scratch_reg_names[] = {
+	"Scratch Byte 0",
+	"Scratch Byte 1",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"EEE Timer Rates",
+	"EEE Wake Timer GE",
+	"EEE Assertion Timer",
+	"EEE Wake Timer",
+	"EEE TxIdle Timer",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"GPIO 0 Port Stall Vector 0",
+	"GPIO 0 Port Stall Vector 1",
+	"GPIO 1 Port Stall Vector 0",
+	"GPIO 1 Port Stall Vector 1",
+	"GPIO 2 Port Stall Vector 0",
+	"GPIO 2 Port Stall Vector 1",
+	"GPIO 3 Port Stall Vector 0",
+	"GPIO 3 Port Stall Vector 1",
+	"GPIO 4 Port Stall Vector 0",
+	"GPIO 4 Port Stall Vector 1",
+	"GPIO 5 Port Stall Vector 0",
+	"GPIO 5 Port Stall Vector 1",
+	"GPIO 6 Port Stall Vector 0",
+	"GPIO 6 Port Stall Vector 1",
+	"GPIO 7 Port Stall Vector 0",
+	"GPIO 7 Port Stall Vector 1",
+	"GPIO 8 Port Stall Vector 0",
+	"GPIO 8 Port Stall Vector 1",
+	"GPIO 9 Port Stall Vector 0",
+	"GPIO 9 Port Stall Vector 1",
+	"GPIO 10 Port Stall Vector 0",
+	"GPIO 10 Port Stall Vector 1",
+	"GPIO 11 Port Stall Vector 0",
+	"GPIO 11 Port Stall Vector 1",
+	"GPIO 12 Port Stall Vector 0",
+	"GPIO 12 Port Stall Vector 1",
+	"GPIO 13 Port Stall Vector 0",
+	"GPIO 13 Port Stall Vector 1",
+	"GPIO 14 Port Stall Vector 0",
+	"GPIO 14 Port Stall Vector 1",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"GPIO Configuration",
+	"GPIO Configuration",
+	"GPIO Direction",
+	"GPIO Direction",
+	"GPIO Data",
+	"GPIO Data",
+	"Reserved",
+	"Reserved",
+	"GPIO Pin Control 0",
+	"GPIO Pin Control 1",
+	"GPIO Pin Control 2",
+	"GPIO Pin Control 3",
+	"GPIO Pin Control 4",
+	"GPIO Pin Control 5",
+	"GPIO Pin Control 6",
+	"GPIO Pin Control 7",
+	"CONFIG Data0",
+	"CONFIG Data1",
+	"CONFIG Data2",
+	"CONFIG Data3",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+	"Reserved",
+};
+
+
+static const char **scratch_reg_brekout_compatible(struct mv88e6xxx_ctx *ctx)
+{
+	switch (ctx->chip) {
+	case MV88E6190:
+	case MV88E6191:
+	case MV88E6290:
+	case MV88E6390:
+		if (sizeof(mv88e6390_scratch_reg_names)/sizeof(char*) == ctx->data_len)
+			return mv88e6390_scratch_reg_names;
+		break;
+	case MV88E6320:
+	case MV88E6321:
+		if (sizeof(mv88e6320_scratch_reg_names)/sizeof(char*) == ctx->data_len)
+			return mv88e6320_scratch_reg_names;
+		break;
+	case MV88E6172:
+	case MV88E6176:
+	case MV88E6240:
+	case MV88E6352:
+		if (sizeof(mv88e6352_scratch_reg_names)/sizeof(char*) == ctx->data_len)
+			return mv88e6352_scratch_reg_names;		
+		break;
+	}
+	return NULL;
+}
+
+static void scratch_print_reg_name(struct mv88e6xxx_ctx *ctx, const char *table[], int reg)
+{
+	printf("%02x ", reg);
+	printf("%-28s ", table[reg]);
+	printf("%02x\n", ctx->snapshot_data[reg]);
+}
 
 static void ports_print_reg_name(struct mv88e6xxx_ctx *ctx, int reg)
 {
@@ -2029,6 +2473,39 @@ static void cmd_global2(struct mv88e6xxx_ctx *ctx)
 	}
 }
 
+static void cmd_scratch(struct mv88e6xxx_ctx *ctx)
+{
+	uint8_t *scratch;
+	int err;
+	int i;
+	const char **reg_table;
+
+	printf("Scratch/misc/GPIO:\n");
+
+	err = new_snapshot(ctx, "scratch");
+	if (err)
+		return;
+
+	err = dump_snapshot(ctx, "scratch");
+	if (err)
+		return;
+
+	if (ctx->data_len != 128)
+		printf("Unexpected data length. %ld != 128\n", ctx->data_len);
+
+
+
+	reg_table = scratch_reg_brekout_compatible(ctx);
+
+	if (reg_table) {
+		for (i = 0; i < 128; i++) {
+			scratch_print_reg_name(ctx, reg_table, i);
+		}
+	} else
+		region_print_hex((uint8_t *)ctx->snapshot_data, ctx->data_len);
+	
+}
+
 static int get_info_cb(const struct nlmsghdr *nlh, void *data)
 {
 	struct genlmsghdr *genl = mnl_nlmsg_get_payload(nlh);
@@ -2140,6 +2617,7 @@ int main(int argc, char * argv[])
 	bool do_ports = false;
 	bool do_port = false;
 	int port;
+	bool do_scratch = false;
 	bool do_list = false;
 	bool have_device = false;
 	bool debug = false;
@@ -2151,6 +2629,7 @@ int main(int argc, char * argv[])
 		{"global2", no_argument,       0,  0 },
 		{"ports",   no_argument,       0,  0 },
 		{"port",    required_argument, 0,  0 },
+		{"scratch", no_argument,       0,  0 },
 		{"device",  required_argument, 0, 'd'},
 		{"list",    no_argument,       0, 'l'},
 		{"debug",   no_argument,       0, 'D'},
@@ -2188,6 +2667,9 @@ int main(int argc, char * argv[])
 			case 5:
 				do_port = true;
 				port = atoi(optarg);
+				break;
+			case 6:
+				do_scratch = true;
 				break;
 			}
 			break;
@@ -2267,6 +2749,11 @@ int main(int argc, char * argv[])
 
 	if (do_global2) {
 		cmd_global2(&ctx);
+		delete_snapshots(&ctx);
+	}
+
+	if (do_scratch) {
+		cmd_scratch(&ctx);
 		delete_snapshots(&ctx);
 	}
 
