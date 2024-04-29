@@ -1412,10 +1412,10 @@ static void vtu_mv88e6xxx(struct mv88e6xxx_ctx *ctx, uint16_t fid_mask)
 {
 	struct mv88e6xxx_devlink_vtu_entry *table;
 	bool state, page, vidpolicy;
-	uint8_t fprio, qprio, fid;
 	uint8_t port_tag[16], sid;
+	uint8_t fprio, qprio;
+	uint16_t vid, fid;
 	int entries, i, p;
-	uint16_t vid;
 
 	table = (struct mv88e6xxx_devlink_vtu_entry *)ctx->snapshot_data;
 	entries = ctx->data_len / sizeof(struct mv88e6xxx_devlink_vtu_entry);
