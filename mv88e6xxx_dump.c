@@ -1412,10 +1412,10 @@ static void vtu_mv88e6xxx(struct mv88e6xxx_ctx *ctx, uint16_t fid_mask)
 {
 	struct mv88e6xxx_devlink_vtu_entry *table;
 	bool state, page, vidpolicy;
-	uint8_t fprio, qprio, fid;
 	uint8_t port_tag[16], sid;
+	uint8_t fprio, qprio;
+	uint16_t vid, fid;
 	int entries, i, p;
-	uint16_t vid;
 
 	table = (struct mv88e6xxx_devlink_vtu_entry *)ctx->snapshot_data;
 	entries = ctx->data_len / sizeof(struct mv88e6xxx_devlink_vtu_entry);
@@ -1538,7 +1538,7 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 	case MV88E6290:
 	case MV88E6390:
 		ctx->vtu_port_size = 8;
-		return vtu_mv88e6xxx(ctx, 0x7ff);
+		return vtu_mv88e6xxx(ctx, 0xfff);
 	case MV88E6171:
 	case MV88E6175:
 	case MV88E6350:
@@ -1547,13 +1547,13 @@ static void cmd_vtu(struct mv88e6xxx_ctx *ctx)
 	case MV88E6176:
 	case MV88E6240:
 	case MV88E6352:
-		return vtu_mv88e6xxx(ctx, 0x7ff);
+		return vtu_mv88e6xxx(ctx, 0xfff);
 	case MV88E6141:
 	case MV88E6341:
 		return vtu_mv88e6xxx(ctx, 0xff);
 	case MV88E6320:
 	case MV88E6321:
-		return vtu_mv88e6xxx(ctx, 0x7ff);
+		return vtu_mv88e6xxx(ctx, 0xfff);
 	case MV88E6071:
 	case MV88E6220:
 	case MV88E6250:
